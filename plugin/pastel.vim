@@ -52,23 +52,26 @@ function SetPopupContent(popup, bg)
   call popup_settext(a:popup, popuptext)
 endfunction
 function SetupPopupHilightStyles()
-  execute 'highlight pastelBlack guibg='.g:pastel_black_bg
-  call prop_type_add('pastel_b', {'highlight': 'pastelBlack'})
-  execute 'highlight pastelWhite guibg='.g:pastel_white_bg
-  call prop_type_add('pastel_w', {'highlight': 'pastelWhite'})
-  execute 'highlight pastelTrans    guifg='.g:pastel_trans_fg.' guibg='.g:pastel_trans_bg
-  execute 'highlight pastelTransInv guifg='.g:pastel_trans_bg.' guibg='.g:pastel_trans_fg
-  call prop_type_add('pastel_t', {'highlight': 'pastelTrans'})
-  call prop_type_add('pastel_T', {'highlight': 'pastelTransInv'})
-  highlight pastelDebug1    guifg=#FF0000 guibg=#00FFFF
-  highlight pastelDebug2    guifg=#00FF00 guibg=#FF00FF
-  highlight pastelDebug3    guifg=#0000FF guibg=#FFFF00
-  call prop_type_add('pastel_1', {'highlight': 'pastelDebug1'})
-  call prop_type_add('pastel_2', {'highlight': 'pastelDebug2'})
-  call prop_type_add('pastel_3', {'highlight': 'pastelDebug3'})
-  "you should not see this, ever
-  highlight pastelColor guifg=#FF00FF
-  call prop_type_add('pastel_C', {'highlight': 'pastelColor'})
+  if !exists('g:pastel_prop_init')
+    let g:pastel_prop_init=v:true
+    execute 'highlight pastelBlack guibg='.g:pastel_black_bg
+    call prop_type_add('pastel_b', {'highlight': 'pastelBlack'})
+    execute 'highlight pastelWhite guibg='.g:pastel_white_bg
+    call prop_type_add('pastel_w', {'highlight': 'pastelWhite'})
+    execute 'highlight pastelTrans    guifg='.g:pastel_trans_fg.' guibg='.g:pastel_trans_bg
+    execute 'highlight pastelTransInv guifg='.g:pastel_trans_bg.' guibg='.g:pastel_trans_fg
+    call prop_type_add('pastel_t', {'highlight': 'pastelTrans'})
+    call prop_type_add('pastel_T', {'highlight': 'pastelTransInv'})
+    highlight pastelDebug1    guifg=#FF0000 guibg=#00FFFF
+    highlight pastelDebug2    guifg=#00FF00 guibg=#FF00FF
+    highlight pastelDebug3    guifg=#0000FF guibg=#FFFF00
+    call prop_type_add('pastel_1', {'highlight': 'pastelDebug1'})
+    call prop_type_add('pastel_2', {'highlight': 'pastelDebug2'})
+    call prop_type_add('pastel_3', {'highlight': 'pastelDebug3'})
+    "you should not see this, ever
+    highlight pastelColor guifg=#FF00FF
+    call prop_type_add('pastel_C', {'highlight': 'pastelColor'})
+  endif
 endfunction
 function OnCursorMove() abort
   let color=matchstr(expand('<cword>'), '\v#[0-9A-Fa-f]{6}')
@@ -133,6 +136,9 @@ let g:pastel_black_bg='#000000'
 
 call SetupPopupHilightStyles()
 
-autocmd CursorMoved * call OnCursorMove()
+augroup pastel
+  autocmd!
+  autocmd CursorMoved * call OnCursorMove()
+augroup end
 
 "vim: sw=2 ts=2 et fdm=syntax
