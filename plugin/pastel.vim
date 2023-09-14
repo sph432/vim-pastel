@@ -29,7 +29,8 @@ function SetPopupContent(popup, bg)
         let line={'text': linetext, 'props': [{'col': 1, 'length': totw, 'type': a:bg}]}
         call add(popuptext, line)
       endfor
-      for i in range(1,colh) "color block
+      for i in range(bgh+1,bgh+colh) "color block
+        "so we can now %2 the line nos reliably
         let linetext=""
         for j in range (1,totw)
           let linetext=linetext." "
@@ -39,7 +40,7 @@ function SetPopupContent(popup, bg)
 \                                             {'col': bgw+colw+1, 'length': bgw, 'type': a:bg}]}
         call add(popuptext, line)
       endfor
-      for i in range(1,bgh) "bottom bg rows
+      for i in range(bgh+colh+1,2*bgh+colh) "bottom bg rows
         let linetext=""
         for j in range (1,totw)
           let linetext=linetext." "
