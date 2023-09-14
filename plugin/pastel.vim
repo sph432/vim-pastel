@@ -1,56 +1,63 @@
 function SetPopupContent(popup, bg)
   const BLOCK_WIDTH=3 "a single ▀ or ▄ takes up 3 bytes in UTF-8
+  "parse options
   if g:pastel_color_size % 2
-    if g:pastel_bg_size % 2
-      "IMPLEMENT
-      echom "odd sizes are not yet implemented"
-    else
-      "IMPLEMENT
-      echom "odd sizes are not yet implemented"
-    endif
+    "squares will be off-by-half, so set outer border width to 3u
+    let brdw=3
+    "(3uv=1.5 lines=1 line,as the half-line will be added automatically)
+    let brdh=1
+    echom "odd sizes are not yet implemented"
+    return
   else
-    if g:pastel_bg_size % 2
-      "IMPLEMENT
-      echom "odd sizes are not yet implemented"
-    else
-      let bgh=g:pastel_bg_size / 2
-      let bgw=g:pastel_bg_size
-      let colh=g:pastel_color_size / 2
-      let colw=g:pastel_color_size
-      echom 'bgh'.bgh.'bgw'.bgw.'colh'.colh.'colw'.colw
-      let toth=bgh+colh
-      let totw=bgw*2+colw
-      let popuptext = []
-      for i in range(1,bgh) "top bg rows
-        let linetext=""
-        for j in range (1,totw)
-          let linetext=linetext." "
-        endfor
-        let line={'text': linetext, 'props': [{'col': 1, 'length': totw, 'type': a:bg}]}
-        call add(popuptext, line)
-      endfor
-      for i in range(bgh+1,bgh+colh) "color block
-        "so we can now %2 the line nos reliably
-        let linetext=""
-        for j in range (1,totw)
-          let linetext=linetext." "
-        endfor
-        let line={'text': linetext, 'props': [{'col': 1, 'length': bgw, 'type': a:bg},
-\                                             {'col': bgw+1, 'length': colw, 'type': 'pastel_C'},
-\                                             {'col': bgw+colw+1, 'length': bgw, 'type': a:bg}]}
-        call add(popuptext, line)
-      endfor
-      for i in range(bgh+colh+1,2*bgh+colh) "bottom bg rows
-        let linetext=""
-        for j in range (1,totw)
-          let linetext=linetext." "
-        endfor
-        let line={'text': linetext, 'props': [{'col': 1, 'length': totw, 'type': a:bg}]}
-        call add(popuptext, line)
-      endfor
-    endif
+    let brdw=4
+    let brdh=2
   endif
+  if g:pastel_bg_size % 2
+    "IMPLEMENT
+    echom "odd sizes are not yet implemented"
+    return
+  endif
+  let bgh=g:pastel_bg_size / 2
+  let bgw=g:pastel_bg_size
+  let colh=g:pastel_color_size / 2
+  let colw=g:pastel_color_size
+
+  echom 'brdw:'.brdw.' brdh:'.brdh.' bgh:'.bgh.' bgw:'.bgw.' colh:'.colh.' colw:'.colw
+  let toth=bgh+colh
+  let totw=bgw*2+colw
+  let popuptext = []
+  for i in range(1,bgh) "top bg rows
+    let linetext=""
+    for j in range (1,totw)
+      let linetext=linetext." "
+    endfor
+    let line={'text': linetext, 'props': [{'col': 1, 'length': totw, 'type': a:bg}]}
+    call add(popuptext, line)
+  endfor
+  for i in range(bgh+1,bgh+colh) "color block
+    "so we can now %2 the line nos reliably
+    let linetext=""
+    for j in range (1,totw)
+      let linetext=linetext." "
+    endfor
+    let line={'text': linetext, 'props': [{'col': 1, 'length': bgw, 'type': a:bg},
+\                                         {'col': bgw+1, 'length': colw, 'type': 'pastel_C'},
+\                                         {'col': bgw+colw+1, 'length': bgw, 'type': a:bg}]}
+    call add(popuptext, line)
+  endfor
+  for i in range(bgh+colh+1,2*bgh+colh) "bottom bg rows
+    let linetext=""
+    for j in range (1,totw)
+      let linetext=linetext." "
+    endfor
+    let line={'text': linetext, 'props': [{'col': 1, 'length': totw, 'type': a:bg}]}
+    call add(popuptext, line)
+  endfor
   call popup_settext(a:popup, popuptext)
+  "shift shit around
+  "add l border
+  call win_execute(a:popup, 'normal! ggGI  ')
+  call win_execute(a:popup, 'normal! ggO')
 endfunction
 function SetupPopupHilightStyles()
   if !exists('g:pastel_prop_init')
@@ -63,12 +70,14 @@ function SetupPopupHilightStyles()
     execute 'highlight pastelTransInv guifg='.g:pastel_trans_bg.' guibg='.g:pastel_trans_fg
     call prop_type_add('pastel_t', {'highlight': 'pastelTrans'})
     call prop_type_add('pastel_T', {'highlight': 'pastelTransInv'})
+    "RBF
     highlight pastelDebug1    guifg=#FF0000 guibg=#00FFFF
     highlight pastelDebug2    guifg=#00FF00 guibg=#FF00FF
     highlight pastelDebug3    guifg=#0000FF guibg=#FFFF00
     call prop_type_add('pastel_1', {'highlight': 'pastelDebug1'})
     call prop_type_add('pastel_2', {'highlight': 'pastelDebug2'})
     call prop_type_add('pastel_3', {'highlight': 'pastelDebug3'})
+    "/RBF
     "you should not see this, ever
     highlight pastelColor guifg=#FF00FF
     call prop_type_add('pastel_C', {'highlight': 'pastelColor'})
