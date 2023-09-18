@@ -57,7 +57,7 @@ function SetPopupContent(popup, bg)
   "shift shit around
   "add l border
   call win_execute(a:popup, 'normal! ggGI  ')
-  call win_execute(a:popup, 'normal! ggO')
+  call win_execute(a:popup, 'normal! ggyyP')
 endfunction
 function SetupPopupHilightStyles()
   if !exists('g:pastel_prop_init')
