@@ -3,6 +3,13 @@ if exists('g:loaded_pastel')
 endif
 let g:loaded_pastel=1
 
+if !has('popupwin') || !has('textprop')
+  finish
+endif
+if !has('gui_running') && !&termguicolors
+  finish
+endif
+
 "internal
 let s:pastel_win=0
 
