@@ -111,12 +111,16 @@ function s:ColorAtCursor()
   endwhile
 endfunction
 
+function s:Hide()
+  if s:pastel_win
+    call popup_hide(s:pastel_win)
+  endif
+endfunction
+
 function s:OnCursorMove() abort
   let color=s:ColorAtCursor()
   if empty(color)
-    if s:pastel_win
-      call popup_hide(s:pastel_win)
-    endif
+    call s:Hide()
   else
     execute 'highlight pastelColor guibg='.color
     let pos={'line': 'cursor-2', 'col': 'cursor+2', 'pos': 'topleft'}
@@ -135,6 +139,8 @@ call s:SetupPopupHilightStyles()
 augroup pastel
   autocmd!
   autocmd CursorMoved * call s:OnCursorMove()
+  autocmd InsertEnter,BufLeave * call s:Hide()
+  autocmd InsertLeave * call s:OnCursorMove()
   autocmd ColorScheme * call s:DefineHighlights()
 augroup end
 
