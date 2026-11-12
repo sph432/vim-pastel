@@ -73,19 +73,23 @@ function s:SetPopupContent(popup, bg)
 \              + repeat([bgline], bgh)
   call popup_settext(a:popup, popuptext)
 endfunction
-function s:SetupPopupHilightStyles()
+function s:DefineHighlights()
   execute 'highlight pastelBlack guibg='.g:pastel_black_bg
-  call prop_type_add('pastel_b', {'highlight': 'pastelBlack'})
   execute 'highlight pastelWhite guibg='.g:pastel_white_bg
-  call prop_type_add('pastel_w', {'highlight': 'pastelWhite'})
   execute 'highlight pastelTrans    guifg='.g:pastel_trans_fg
 \         .' guibg='.g:pastel_trans_bg
   execute 'highlight pastelTransInv guifg='.g:pastel_trans_bg
 \         .' guibg='.g:pastel_trans_fg
-  call prop_type_add('pastel_t', {'highlight': 'pastelTrans'})
-  call prop_type_add('pastel_T', {'highlight': 'pastelTransInv'})
   "you should not see this, ever
   highlight pastelColor guifg=#FF00FF
+endfunction
+
+function s:SetupPopupHilightStyles()
+  call s:DefineHighlights()
+  call prop_type_add('pastel_b', {'highlight': 'pastelBlack'})
+  call prop_type_add('pastel_w', {'highlight': 'pastelWhite'})
+  call prop_type_add('pastel_t', {'highlight': 'pastelTrans'})
+  call prop_type_add('pastel_T', {'highlight': 'pastelTransInv'})
   call prop_type_add('pastel_C', {'highlight': 'pastelColor'})
 endfunction
 "the #rrggbb code under the cursor, or ''
@@ -131,6 +135,7 @@ call s:SetupPopupHilightStyles()
 augroup pastel
   autocmd!
   autocmd CursorMoved * call s:OnCursorMove()
+  autocmd ColorScheme * call s:DefineHighlights()
 augroup end
 
 "vim: sw=2 ts=2 et fdm=syntax
