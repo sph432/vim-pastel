@@ -42,25 +42,14 @@ let g:pastel_trans_fg=get(g:, 'pastel_trans_fg', '#BFBFBF') "75% gray
 let g:pastel_trans_bg=get(g:, 'pastel_trans_bg', '#404040') "25% gray
 let g:pastel_black_bg=get(g:, 'pastel_black_bg', '#000000')
 
+if g:pastel_color_size % 2 || g:pastel_bg_size % 2
+  echohl WarningMsg
+  echom 'pastel: odd sizes are not yet implemented'
+  echohl None
+  finish
+endif
+
 function s:SetPopupContent(popup, bg)
-  const BLOCK_WIDTH=3 "a single ▀ or ▄ takes up 3 bytes in UTF-8
-  "parse options
-  if g:pastel_color_size % 2 " ==1
-    "squares will be off-by-half, so set outer border width to 3u
-    let brdw=3
-    "(3uv=1.5 lines=1 line,as the half-line will be added automatically)
-    let brdh=1
-    echom "odd sizes are not yet implemented"
-    return
-  else " % 2 == 0
-    let brdw=4
-    let brdh=2
-  endif
-  if g:pastel_bg_size % 2
-    "IMPLEMENT
-    echom "odd sizes are not yet implemented"
-    return
-  endif
   let bgh=g:pastel_bg_size / 2
   let bgw=g:pastel_bg_size
   let colh=g:pastel_color_size / 2
