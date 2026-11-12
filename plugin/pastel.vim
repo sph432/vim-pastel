@@ -3,6 +3,45 @@ if exists('g:loaded_pastel')
 endif
 let g:loaded_pastel=1
 
+"internal
+let s:pastel_win=""
+
+"options
+"a definition of color blocks to show, from left to right
+"  combination of the following as a string:
+"  w - color on white background
+"  b - color on black background
+"  t - color on checkered "transparent" background
+"  2 - b and w alternating
+"  3 - b, t and w alternating (in that order)
+"  | - put blocks right of it in a new line
+"
+"blocks are of the same size (see below)
+" default is "btw", sharkdp/pastel's look would be "t",
+" other suggested combinations are "2t" "2|t" and "3"
+let g:pastel_color_mode=get(g:, 'pastel_color_mode', 't')
+
+"alternate between backgrounds every n seconds in "2" and "3" blocks
+let g:pastel_color_timer=get(g:, 'pastel_color_timer', 5)
+
+"a definition of color codes to show, from top to bottom
+"  combination of the following as a string:
+"  x - hexadecimal RGB
+"  r - rgb  0-255
+"  c - cmyk 0-255
+let g:pastel_detail_mode=get(g:, 'pastel_detail_mode', 'x')
+
+"size is measured vertically in half-chars, horizontally in chars
+"6/2 is how sharkdp/pastel looks
+let g:pastel_color_size=get(g:, 'pastel_color_size', 6)
+let g:pastel_bg_size=get(g:, 'pastel_bg_size', 2)
+
+"these are better left alone but you may want to change trans colors
+let g:pastel_white_bg=get(g:, 'pastel_white_bg', '#FFFFFF')
+let g:pastel_trans_fg=get(g:, 'pastel_trans_fg', '#BFBFBF') "75% gray
+let g:pastel_trans_bg=get(g:, 'pastel_trans_bg', '#404040') "25% gray
+let g:pastel_black_bg=get(g:, 'pastel_black_bg', '#000000')
+
 function s:SetPopupContent(popup, bg)
   const BLOCK_WIDTH=3 "a single ▀ or ▄ takes up 3 bytes in UTF-8
   "parse options
@@ -124,49 +163,6 @@ function s:OnCursorMove() abort
     call s:SetPopupContent(s:pastel_win, 'pastel_b')
   endif
 endfunction
-
-"internal
-let s:pastel_win=""
-
-"options
-"a definition of color blocks to show, from left to right
-"  combination of the following as a string:
-"  w - color on white background
-"  b - color on black background
-"  t - color on checkered "transparent" background
-"  2 - b and w alternating
-"  3 - b, t and w alternating (in that order)
-"  | - put blocks right of it in a new line
-"
-"blocks are of the same size (see below)
-" default is "btw", sharkdp/pastel's look would be "t",
-" other suggested combinations are "2t" "2|t" and "3"
-let g:pastel_color_mode="t"
-
-"alternate between backgrounds every n seconds in "2" and "3" blocks
-let g:pastel_color_timer=5
-
-"a definition of color codes to show, from top to bottom
-"  combination of the following as a string:
-"  x - hexadecimal RGB
-"  r - rgb  0-255
-"  c - cmyk 0-255
-"
-"blocks are of the same size (see below)
-" default is "btw", sharkdp/pastel's look would be "t",
-" other suggested combinations are "2t" "2|t" and "3"
-let g:pastel_detail_mode="x"
-
-"size is measured vertically in half-chars, horizontally in chars
-"6/2 is how sharkdp/pastel looks
-let g:pastel_color_size=6
-let g:pastel_bg_size=2
-
-"these are better left alone but you may want to change trans colors
-let g:pastel_white_bg='#FFFFFF'
-let g:pastel_trans_fg='#BFBFBF' "75% gray
-let g:pastel_trans_bg='#404040' "25% gray
-let g:pastel_black_bg='#000000'
 
 call s:SetupPopupHilightStyles()
 
