@@ -1,4 +1,9 @@
-function SetPopupContent(popup, bg)
+if exists('g:loaded_pastel')
+  finish
+endif
+let g:loaded_pastel=1
+
+function s:SetPopupContent(popup, bg)
   const BLOCK_WIDTH=3 "a single ▀ or ▄ takes up 3 bytes in UTF-8
   "parse options
   if g:pastel_color_size % 2 " ==1
@@ -59,7 +64,7 @@ function SetPopupContent(popup, bg)
   call win_execute(a:popup, 'normal! ggGI  ')
   call win_execute(a:popup, 'normal! ggyyP')
 endfunction
-function SetupPopupHilightStyles()
+function s:SetupPopupHilightStyles()
   if !exists('g:pastel_prop_init')
     let g:pastel_prop_init=v:true
     execute 'highlight pastelBlack guibg='.g:pastel_black_bg
@@ -83,7 +88,7 @@ function SetupPopupHilightStyles()
     call prop_type_add('pastel_C', {'highlight': 'pastelColor'})
   endif
 endfunction
-function OnCursorMove() abort
+function s:OnCursorMove() abort
   let color=matchstr(expand('<cword>'), '\v#[0-9A-Fa-f]{6}')
   if empty(color)
     if s:pastel_win != ""
@@ -97,7 +102,7 @@ function OnCursorMove() abort
       call popup_show(s:pastel_win)
       call popup_move(s:pastel_win, {'line': 'cursor-2', 'col': 'cursor+2', 'pos': 'topleft'})
     endif
-    call SetPopupContent(s:pastel_win, 'pastel_b')
+    call s:SetPopupContent(s:pastel_win, 'pastel_b')
   endif
 endfunction
 
@@ -144,11 +149,11 @@ let g:pastel_trans_fg='#BFBFBF' "75% gray
 let g:pastel_trans_bg='#404040' "25% gray
 let g:pastel_black_bg='#000000'
 
-call SetupPopupHilightStyles()
+call s:SetupPopupHilightStyles()
 
 augroup pastel
   autocmd!
-  autocmd CursorMoved * call OnCursorMove()
+  autocmd CursorMoved * call s:OnCursorMove()
 augroup end
 
 "vim: sw=2 ts=2 et fdm=syntax
