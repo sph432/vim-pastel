@@ -1,14 +1,14 @@
 function SetPopupContent(popup, bg)
   const BLOCK_WIDTH=3 "a single ▀ or ▄ takes up 3 bytes in UTF-8
   "parse options
-  if g:pastel_color_size % 2
+  if g:pastel_color_size % 2 " ==1
     "squares will be off-by-half, so set outer border width to 3u
     let brdw=3
     "(3uv=1.5 lines=1 line,as the half-line will be added automatically)
     let brdh=1
     echom "odd sizes are not yet implemented"
     return
-  else
+  else " % 2 == 0
     let brdw=4
     let brdh=2
   endif
