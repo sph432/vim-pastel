@@ -4,7 +4,7 @@ endif
 let g:loaded_pastel=1
 
 "internal
-let s:pastel_win=""
+let s:pastel_win=0
 
 "options
 "a definition of color blocks to show, from left to right
@@ -54,67 +54,32 @@ function s:SetPopupContent(popup, bg)
   let bgw=g:pastel_bg_size
   let colh=g:pastel_color_size / 2
   let colw=g:pastel_color_size
-
-  echom 'brdw:'.brdw.' brdh:'.brdh.' bgh:'.bgh.' bgw:'.bgw.' colh:'.colh.' colw:'.colw
-  let toth=bgh+colh
   let totw=bgw*2+colw
-  let popuptext = []
-  for i in range(1,bgh) "top bg rows
-    let linetext=""
-    for j in range (1,totw)
-      let linetext=linetext." "
-    endfor
-    let line={'text': linetext, 'props': [{'col': 1, 'length': totw, 'type': a:bg}]}
-    call add(popuptext, line)
-  endfor
-  for i in range(bgh+1,bgh+colh) "color block
-    "so we can now %2 the line nos reliably
-    let linetext=""
-    for j in range (1,totw)
-      let linetext=linetext." "
-    endfor
-    let line={'text': linetext, 'props': [{'col': 1, 'length': bgw, 'type': a:bg},
-\                                         {'col': bgw+1, 'length': colw, 'type': 'pastel_C'},
-\                                         {'col': bgw+colw+1, 'length': bgw, 'type': a:bg}]}
-    call add(popuptext, line)
-  endfor
-  for i in range(bgh+colh+1,2*bgh+colh) "bottom bg rows
-    let linetext=""
-    for j in range (1,totw)
-      let linetext=linetext." "
-    endfor
-    let line={'text': linetext, 'props': [{'col': 1, 'length': totw, 'type': a:bg}]}
-    call add(popuptext, line)
-  endfor
+  let blank=repeat(' ', totw)
+  let bgline={'text': blank,
+\             'props': [{'col': 1, 'length': totw, 'type': a:bg}]}
+  let colline={'text': blank,
+\              'props': [{'col': 1, 'length': bgw, 'type': a:bg},
+\                        {'col': bgw+1, 'length': colw, 'type': 'pastel_C'},
+\                        {'col': bgw+colw+1, 'length': bgw, 'type': a:bg}]}
+  let popuptext=repeat([bgline], bgh) + repeat([colline], colh)
+\              + repeat([bgline], bgh)
   call popup_settext(a:popup, popuptext)
-  "shift shit around
-  "add l border
-  call win_execute(a:popup, 'normal! ggGI  ')
-  call win_execute(a:popup, 'normal! ggyyP')
 endfunction
 function s:SetupPopupHilightStyles()
-  if !exists('g:pastel_prop_init')
-    let g:pastel_prop_init=v:true
-    execute 'highlight pastelBlack guibg='.g:pastel_black_bg
-    call prop_type_add('pastel_b', {'highlight': 'pastelBlack'})
-    execute 'highlight pastelWhite guibg='.g:pastel_white_bg
-    call prop_type_add('pastel_w', {'highlight': 'pastelWhite'})
-    execute 'highlight pastelTrans    guifg='.g:pastel_trans_fg.' guibg='.g:pastel_trans_bg
-    execute 'highlight pastelTransInv guifg='.g:pastel_trans_bg.' guibg='.g:pastel_trans_fg
-    call prop_type_add('pastel_t', {'highlight': 'pastelTrans'})
-    call prop_type_add('pastel_T', {'highlight': 'pastelTransInv'})
-    "RBF
-    highlight pastelDebug1    guifg=#FF0000 guibg=#00FFFF
-    highlight pastelDebug2    guifg=#00FF00 guibg=#FF00FF
-    highlight pastelDebug3    guifg=#0000FF guibg=#FFFF00
-    call prop_type_add('pastel_1', {'highlight': 'pastelDebug1'})
-    call prop_type_add('pastel_2', {'highlight': 'pastelDebug2'})
-    call prop_type_add('pastel_3', {'highlight': 'pastelDebug3'})
-    "/RBF
-    "you should not see this, ever
-    highlight pastelColor guifg=#FF00FF
-    call prop_type_add('pastel_C', {'highlight': 'pastelColor'})
-  endif
+  execute 'highlight pastelBlack guibg='.g:pastel_black_bg
+  call prop_type_add('pastel_b', {'highlight': 'pastelBlack'})
+  execute 'highlight pastelWhite guibg='.g:pastel_white_bg
+  call prop_type_add('pastel_w', {'highlight': 'pastelWhite'})
+  execute 'highlight pastelTrans    guifg='.g:pastel_trans_fg
+\         .' guibg='.g:pastel_trans_bg
+  execute 'highlight pastelTransInv guifg='.g:pastel_trans_bg
+\         .' guibg='.g:pastel_trans_fg
+  call prop_type_add('pastel_t', {'highlight': 'pastelTrans'})
+  call prop_type_add('pastel_T', {'highlight': 'pastelTransInv'})
+  "you should not see this, ever
+  highlight pastelColor guifg=#FF00FF
+  call prop_type_add('pastel_C', {'highlight': 'pastelColor'})
 endfunction
 "the #rrggbb code under the cursor, or ''
 function s:ColorAtCursor()
@@ -138,16 +103,17 @@ endfunction
 function s:OnCursorMove() abort
   let color=s:ColorAtCursor()
   if empty(color)
-    if s:pastel_win != ""
+    if s:pastel_win
       call popup_hide(s:pastel_win)
     endif
   else
     execute 'highlight pastelColor guibg='.color
-    if s:pastel_win == ""
-      let s:pastel_win=popup_create([], {'line': 'cursor-2', 'col': 'cursor+2', 'pos': 'topleft'})
-    else
+    let pos={'line': 'cursor-2', 'col': 'cursor+2', 'pos': 'topleft'}
+    if s:pastel_win
       call popup_show(s:pastel_win)
-      call popup_move(s:pastel_win, {'line': 'cursor-2', 'col': 'cursor+2', 'pos': 'topleft'})
+      call popup_move(s:pastel_win, pos)
+    else
+      let s:pastel_win=popup_create([], pos)
     endif
     call s:SetPopupContent(s:pastel_win, 'pastel_b')
   endif
