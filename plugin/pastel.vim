@@ -73,6 +73,7 @@ function s:SetPopupContent(popup, bg)
 \              + repeat([bgline], bgh)
   call popup_settext(a:popup, popuptext)
 endfunction
+
 function s:DefineHighlights()
   execute 'highlight pastelBlack guibg='.g:pastel_black_bg
   execute 'highlight pastelWhite guibg='.g:pastel_white_bg
@@ -92,6 +93,7 @@ function s:SetupPopupHilightStyles()
   call prop_type_add('pastel_T', {'highlight': 'pastelTransInv'})
   call prop_type_add('pastel_C', {'highlight': 'pastelColor'})
 endfunction
+
 "the #rrggbb code under the cursor, or ''
 function s:ColorAtCursor()
   let line=getline('.')
