@@ -88,8 +88,27 @@ function s:SetupPopupHilightStyles()
     call prop_type_add('pastel_C', {'highlight': 'pastelColor'})
   endif
 endfunction
+"the #rrggbb code under the cursor, or ''
+function s:ColorAtCursor()
+  let line=getline('.')
+  let col=col('.')-1
+  let start=0
+  while 1
+    let [color, mbeg, mend]=matchstrpos(line, '\v#\x{6}\x@!', start)
+    if mbeg < 0
+      return ''
+    endif
+    if col < mbeg
+      return ''
+    elseif col < mend
+      return color
+    endif
+    let start=mend
+  endwhile
+endfunction
+
 function s:OnCursorMove() abort
-  let color=matchstr(expand('<cword>'), '\v#[0-9A-Fa-f]{6}')
+  let color=s:ColorAtCursor()
   if empty(color)
     if s:pastel_win != ""
       call popup_hide(s:pastel_win)
