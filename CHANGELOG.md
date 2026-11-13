@@ -24,6 +24,11 @@
 - Popup not following window switches: it is hidden on leaving a window and
     shown again on returning to a color code
 
+## 0.2.1 (planned)
+#### Added
+- Popup placement preferences `g:pastel_offset_x` and `g:pastel_offset_y`; the
+    offset is inverted along an axis where the popup would not fit
+
 # TODO
 - Color modes: show the color on white, black and "transparent" backgrounds
     (`g:pastel_color_mode`: `w`, `b`, `t`, `2`, `3`, `|`)
