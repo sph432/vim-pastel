@@ -296,9 +296,13 @@ function s:SetPopupContent(popup)
   endif
 endfunction
 
-"the color of a #rrggbb or #rrggbbaa code, as [red, green, blue, alpha]
+"the color of a #rgb, #rgba, #rrggbb or #rrggbbaa code, as [red, green, blue,
+"alpha]
 function s:ParseHex(code)
   let digits=a:code[1:]
+  if len(digits) <= 4
+    let digits=join(map(split(digits, '\zs'), 'v:val.v:val'), '')
+  endif
   let color=map(range(3), 'str2nr(digits[2*v:val:2*v:val+1], 16)')
   let alpha=len(digits) == 8 ? str2nr(digits[6:7], 16)/255.0 : 1.0
   return color+[alpha]
@@ -308,7 +312,8 @@ endfunction
 "getting a found text's color, [red, green, blue, alpha], or [] if it is not
 "one after all
 let s:formats=[
-\ {'pattern': '\v#(\x{8}|\x{6})\x@!', 'parse': function('s:ParseHex')},
+\ {'pattern': '\v(\w)@<!#(\x{8}|\x{6}|\x{4}|\x{3})\w@!',
+\  'parse': function('s:ParseHex')},
 \]
 
 "[color, start, end] of the color code under the cursor, the start and end
