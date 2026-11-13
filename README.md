@@ -32,9 +32,13 @@ features (SEE DEPENDENCIES) or if neither a GUI nor `termguicolors` is in use.
 
 # DETAILS
 ## Detected colors
-Hexadecimal codes with 6 digits (`#RRGGBB`) and with 8 digits (`#RRGGBBAA`) are
-recognized. A code directly followed by more hexadecimal digits is not treated
-as a color.
+These hexadecimal codes are recognized:
+- `#RGB` and `#RRGGBB`
+- `#RGBA` and `#RRGGBBAA`, or `#AARRGGBB`, see `g:pastel_alpha_position`
+
+`#ARGB` is not recognized: the 4-digit form is always `#RGBA`. The code must
+not be preceded or followed by a letter, digit or underscore, so that eg.
+`#define` or `#abcdefg1` are not taken for colors.
 
 A code with an alpha channel is shown blended over each background: on black
 it looks darker, on white lighter, and on the checkered background the
@@ -92,6 +96,19 @@ defaults are shown in parentheses.
     half-characters and horizontally in characters
 - `g:pastel_bg_size` (`2`) - size of the margin around the color block, in the
     same units
+- `g:pastel_alpha_position` (`'auto'`) - where the alpha is in 8-digit
+    hexadecimal codes:
+  - `'last'`: `#RRGGBBAA`, as in CSS
+  - `'first'`: `#AARRGGBB`, as in Android
+  - `'auto'`: `'first'` in the filetypes of `g:pastel_alpha_first_filetypes`,
+        `'last'` in the others, and a short note (`pastel: assuming ...`) the
+        first time an 8-digit code is found in a buffer, as it is a guess
+
+  The variable `b:pastel_alpha_position`, if set, takes precedence in its
+  buffer; eg. `autocmd FileType cs let b:pastel_alpha_position='first'`. The
+  4-digit form is not affected, as it is always `#RGBA`.
+- `g:pastel_alpha_first_filetypes` (`['java', 'kotlin', 'xml']`) - the filetypes
+    where `'auto'` means `'first'`
 - `g:pastel_offset_x` (`2`) - horizontal placement of the popup relative to the
     color code, in characters:
   - positive: right of the code, its left edge that many columns after the
@@ -138,6 +155,14 @@ high. A character cell holds two pixels: a space if they have the same color,
 or an upper half block with the upper pixel as its foreground and the lower
 one as its background if they differ. The content is built from text
 properties.
+
+## Tests
+The tests are run from the repository's directory, or any other, with:
+```sh
+vim -Nu NONE -i NONE -es -S test/run.vim
+```
+They print the failures, if any, and exit with an error status if there are
+any.
 
 # META
 ## LICENSE
