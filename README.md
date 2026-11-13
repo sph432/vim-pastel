@@ -60,6 +60,8 @@ defaults are shown in parentheses.
   - `w`: the color on white
   - `t`: the color on a checkered "transparent" background, as in
         sharkdp/pastel
+  - `2`: the color on black and white, alternating
+  - `3`: the color on black, checkered and white, alternating, in that order
   - `|`: the blocks after it go in a new row below
 
   For example, `'t'` is a single block, `'bw'` shows black and white side by
@@ -71,8 +73,13 @@ defaults are shown in parentheses.
   the top of the lower one. A half line that has a block on one side and
   nothing on the other has the default color on the empty side.
 
-  Any other value, for now (including a leading, trailing or doubled `|`),
-  prints a warning and the plugin does not load.
+  Any other value (including a leading, trailing or doubled `|`) prints a
+  warning. At startup the plugin does not load; when set later, the previous
+  layout stays.
+- `g:pastel_color_timer` (`5`) - seconds between the backgrounds of `2` and `3`
+    blocks changing, `0.1` or more, fractions allowed; less than that turns
+    alternating off, showing the first background. The timer only runs while
+    the popup is shown.
 - `g:pastel_color_size` (`6`) - size of the color block, vertically in
     half-characters and horizontally in characters
 - `g:pastel_bg_size` (`2`) - size of the margin around the color block, in the
@@ -108,10 +115,8 @@ of a line. If the total height is odd, the lower half of the last line is left
 in the default color (`Normal`), as a line is always two half-characters high.
 
 ## Not yet in effect
-The following options exist, but nothing reads them yet:
-`g:pastel_color_timer`, `g:pastel_detail_mode`, and the `2` and `3` block
-letters of `g:pastel_color_mode`. SEE [CHANGELOG.md](CHANGELOG.md) for what is
-planned.
+The option `g:pastel_detail_mode` exists, but nothing reads it yet. SEE
+[CHANGELOG.md](CHANGELOG.md) for what is planned.
 
 # TECHNICAL INFORMATION
 On every `CursorMoved`, the plugin matches `#RRGGBB` against the current line
