@@ -44,12 +44,23 @@ cursor movement, so scrolling without moving the cursor leaves it in place.
 All options are global variables, set before the plugin loads. The defaults
 are shown in parentheses.
 
-- `g:pastel_color_mode` (`'b'`) - the background the color is shown on, one of:
-  - `'b'`: black
-  - `'w'`: white
-  - `'t'`: checkered "transparent" background, as in sharkdp/pastel
+- `g:pastel_color_mode` (`'b'`) - the previews to show and their layout, a
+    string of block letters, left to right:
+  - `b`: the color on black
+  - `w`: the color on white
+  - `t`: the color on a checkered "transparent" background, as in
+        sharkdp/pastel
+  - `|`: the blocks after it go in a new row below
 
-  Any other value, for now, prints a warning and the plugin does not load.
+  For example, `'t'` is a single block, `'bw'` shows black and white side by
+  side, and `'t|bw'` shows a checkered block with black and white below it.
+  Each block has its own margin, and all blocks are the same size. Rows with
+  fewer blocks are padded with the default color. Blocks may split a line
+  between them: with odd sizes, the line where two rows meet shows the bottom
+  of the upper block over the top of the lower one.
+
+  Any other value, for now (including a leading, trailing or doubled `|`),
+  prints a warning and the plugin does not load.
 - `g:pastel_color_size` (`6`) - size of the color block, vertically in
     half-characters and horizontally in characters
 - `g:pastel_bg_size` (`2`) - size of the margin around the color block, in the
@@ -80,8 +91,9 @@ in the default color (`Normal`), as a line is always two half-characters high.
 
 ## Not yet in effect
 The following options exist, but nothing reads them yet:
-`g:pastel_color_timer` and `g:pastel_detail_mode`. Only one block is shown at
-a time. SEE [CHANGELOG.md](CHANGELOG.md) for what is planned.
+`g:pastel_color_timer`, `g:pastel_detail_mode`, and the `2` and `3` block
+letters of `g:pastel_color_mode`. SEE [CHANGELOG.md](CHANGELOG.md) for what is
+planned.
 
 # TECHNICAL INFORMATION
 On every `CursorMoved`, the plugin matches `#RRGGBB` against the current line
