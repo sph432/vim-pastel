@@ -24,9 +24,11 @@ let s:pastel_win=0
 "  | - put blocks right of it in a new line
 "
 "blocks are of the same size (see below)
-" default is "btw", sharkdp/pastel's look would be "t",
+" sharkdp/pastel's look would be "t",
 " other suggested combinations are "2t" "2|t" and "3"
-let g:pastel_color_mode=get(g:, 'pastel_color_mode', 't')
+"
+"only a single w, b or t is supported for now
+let g:pastel_color_mode=get(g:, 'pastel_color_mode', 'b')
 
 "alternate between backgrounds every n seconds in "2" and "3" blocks
 let g:pastel_color_timer=get(g:, 'pastel_color_timer', 5)
@@ -64,21 +66,56 @@ if g:pastel_color_size % 2 || g:pastel_bg_size % 2
   finish
 endif
 
-function s:SetPopupContent(popup, bg)
+if index(['w', 'b', 't'], g:pastel_color_mode) < 0
+  echohl WarningMsg
+  echom 'pastel: unsupported g:pastel_color_mode "'.g:pastel_color_mode
+\       .'", only a single w, b or t is supported for now'
+  echohl None
+  finish
+endif
+
+"checkered background props for columns a:from to a:to of line a:row, in
+"cells 2 columns wide and 1 line high
+function s:Checker(row, from, to)
+  let props=[]
+  let col=a:from
+  while col <= a:to
+    let cell=(col-1)/2
+    let stop=min([a:to, (cell+1)*2])
+    call add(props, {'col': col, 'length': stop-col+1,
+\                    'type': (cell+a:row) % 2 ? 'pastel_t' : 'pastel_T'})
+    let col=stop+1
+  endwhile
+  return props
+endfunction
+
+"background props for columns a:from to a:to of line a:row
+function s:Background(row, from, to)
+  if g:pastel_color_mode == 't'
+    return s:Checker(a:row, a:from, a:to)
+  endif
+  let type=g:pastel_color_mode == 'w' ? 'pastel_w' : 'pastel_b'
+  return [{'col': a:from, 'length': a:to-a:from+1, 'type': type}]
+endfunction
+
+function s:SetPopupContent(popup)
   let bgh=g:pastel_bg_size / 2
   let bgw=g:pastel_bg_size
   let colh=g:pastel_color_size / 2
   let colw=g:pastel_color_size
   let totw=bgw*2+colw
   let blank=repeat(' ', totw)
-  let bgline={'text': blank,
-\             'props': [{'col': 1, 'length': totw, 'type': a:bg}]}
-  let colline={'text': blank,
-\              'props': [{'col': 1, 'length': bgw, 'type': a:bg},
-\                        {'col': bgw+1, 'length': colw, 'type': 'pastel_C'},
-\                        {'col': bgw+colw+1, 'length': bgw, 'type': a:bg}]}
-  let popuptext=repeat([bgline], bgh) + repeat([colline], colh)
-\              + repeat([bgline], bgh)
+  let popuptext=[]
+  for row in range(2*bgh+colh)
+    if row < bgh || row >= bgh+colh
+      let props=s:Background(row, 1, totw)
+    else
+      let props=s:Background(row, 1, bgw)
+\               + [{'col': bgw+1, 'length': colw, 'type': 'pastel_C'}]
+\               + s:Background(row, bgw+colw+1, totw)
+    endif
+    call add(popuptext, {'text': blank, 'props': props})
+  endfor
   call popup_settext(a:popup, popuptext)
 endfunction
 
@@ -185,7 +222,7 @@ function s:OnCursorMove() abort
     else
       let s:pastel_win=popup_create([], pos)
     endif
-    call s:SetPopupContent(s:pastel_win, 'pastel_b')
+    call s:SetPopupContent(s:pastel_win)
   endif
 endfunction
 
