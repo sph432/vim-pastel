@@ -47,14 +47,13 @@ are shown in parentheses.
 - `g:pastel_color_mode` (`'b'`) - the background the color is shown on, one of:
   - `'b'`: black
   - `'w'`: white
-  - `'t'`: checkered "transparent" background, as in sharkdp/pastel (for now
-        a coarse checkerboard of cells 2 columns wide and 1 line high)
+  - `'t'`: checkered "transparent" background, as in sharkdp/pastel
 
   Any other value, for now, prints a warning and the plugin does not load.
 - `g:pastel_color_size` (`6`) - size of the color block, vertically in
-    half-characters and horizontally in characters; MUST be even
+    half-characters and horizontally in characters
 - `g:pastel_bg_size` (`2`) - size of the margin around the color block, in the
-    same units; MUST be even
+    same units
 - `g:pastel_offset_x` (`2`) - horizontal placement of the popup relative to the
     color code, in characters:
   - positive: right of the code, its left edge that many columns after the
@@ -75,8 +74,9 @@ If the popup does not fit on the screen at the requested offset, the offset is
 inverted along that axis (eg. `2` becomes `-2`). If it fits neither way, it is
 moved onto the screen.
 
-Odd sizes are not implemented yet; the plugin prints a warning and does not
-load if one is set.
+Sizes may be odd, in which case the color block starts or ends in the middle
+of a line. If the total height is odd, one extra row of background is added at
+the bottom, as a line is always two half-characters high.
 
 ## Not yet in effect
 The following options exist, but nothing reads them yet:
