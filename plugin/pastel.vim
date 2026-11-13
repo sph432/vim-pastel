@@ -51,6 +51,11 @@ let g:pastel_alpha_position=get(g:, 'pastel_alpha_position', 'auto')
 let g:pastel_alpha_first_filetypes=get(g:, 'pastel_alpha_first_filetypes',
 \                                      ['java', 'kotlin'])
 
+"filetypes where no colors are looked for, eg. ['sql'] for its very long
+"lines, or ['gitcommit'] where #123 is an issue and not a color; lines longer
+"than 'synmaxcol' are never looked at, if it is not 0
+let g:pastel_ignore_filetypes=get(g:, 'pastel_ignore_filetypes', [])
+
 "size is measured vertically in half-chars, horizontally in chars
 "6/2 is how sharkdp/pastel looks
 let g:pastel_color_size=get(g:, 'pastel_color_size', 6)
@@ -542,7 +547,23 @@ let s:formats=[
 "[color, start, end] of the color code under the cursor, the start and end
 "being the byte range of the code in the line, or []; if several overlap,
 "the first one, and of those the longest
+"whether not to look for colors on the current line: in the filetypes of
+"g:pastel_ignore_filetypes, and on lines longer than 'synmaxcol', as looking
+"through a very long line at every cursor movement would be slow; checked
+"before reading the line, which would copy it
+function s:Ignored()
+  for filetype in split(&filetype, '\.')
+    if index(g:pastel_ignore_filetypes, filetype) >= 0
+      return 1
+    endif
+  endfor
+  return &synmaxcol > 0 && col('$') > &synmaxcol+1
+endfunction
+
 function s:ColorAtCursor()
+  if s:Ignored()
+    return []
+  endif
   let line=getline('.')
   let col=col('.')-1
   let found=[]
