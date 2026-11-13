@@ -82,8 +82,14 @@ are shown in parentheses.
     the two colors of the checkered "transparent" background
 
 If the popup does not fit on the screen at the requested offset, the offset is
-inverted along that axis (eg. `2` becomes `-2`). If it fits neither way, it is
-moved onto the screen.
+inverted along that axis (eg. `2` becomes `-2`). If there is no room on either
+side of the code, the popup is placed below the code's line instead, or above
+it if the vertical offset is negative or there is no room below; the vertical
+offset is used for the distance, or `1` if it is `0`. If it fits nowhere, it is
+moved onto the screen as far as possible.
+
+A popup larger than the screen is clipped, not wrapped, and a warning is shown
+once.
 
 Sizes may be odd, in which case the color block starts or ends in the middle
 of a line. If the total height is odd, the lower half of the last line is left
