@@ -45,6 +45,9 @@ CONTENTS                                                     *pastel-contents*
     black it looks darker, on white lighter, and on the checkered background
     the checkers show through.
 
+    Lines longer than 'synmaxcol' (0 means no limit) are not searched, as that
+    would slow down moving the cursor in minified or machine-generated files.
+
 ==============================================================================
 4. OPTIONS                                                    *pastel-options*
 
@@ -103,6 +106,10 @@ b:pastel_alpha_position                              *b:pastel_alpha_position*
                                               *g:pastel_alpha_first_filetypes*
 g:pastel_alpha_first_filetypes  (default ['java', 'kotlin'])
     The filetypes where the "auto" of |g:pastel_alpha_position| means "first".
+
+g:pastel_ignore_filetypes  (default [])            *g:pastel_ignore_filetypes*
+    The filetypes where no colors are looked for, eg. ['sql'] for its very
+    long lines, or ['gitcommit'], where #123 is an issue and not a #RGB color.
 
 g:pastel_offset_x  (default 2)                             *g:pastel_offset_x*
     Horizontal placement of the popup relative to the color code, in

@@ -71,6 +71,10 @@ form, and `00` shows the background alone. The blending is done directly on
 the sRGB values. If you set a background color option to something other than
 a `#RRGGBB` color, the alpha is ignored for that background.
 
+Lines longer than `'synmaxcol'` (3000 by default, 0 meaning no limit) are not
+searched, as that would slow down moving the cursor in eg. minified or
+machine-generated files: it takes seconds on a line of millions of characters.
+
 ## Scrolling
 In Vims that have the `WinScrolled` event (8.2.4713 and newer), the popup
 follows the code when the window is scrolled. SEE Known issues for older
@@ -133,6 +137,9 @@ defaults are shown in parentheses.
   4-digit form is not affected, as it is always `#RGBA`.
 - `g:pastel_alpha_first_filetypes` (`['java', 'kotlin']`) - the filetypes
     where `'auto'` means `'first'`
+- `g:pastel_ignore_filetypes` (`[]`) - the filetypes where no colors are looked
+    for, eg. `['sql']` for its very long lines, or `['gitcommit']`, where
+    `#123` is an issue and not a `#RGB` color
 - `g:pastel_offset_x` (`2`) - horizontal placement of the popup relative to the
     color code, in characters:
   - positive: right of the code, its left edge that many columns after the
