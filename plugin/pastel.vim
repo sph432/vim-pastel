@@ -74,69 +74,87 @@ if index(['w', 'b', 't'], g:pastel_color_mode) < 0
   finish
 endif
 
-"checkered background props for columns a:from to a:to of line a:row, in
-"cells 2 columns wide and 1 line high
-function s:Checker(row, from, to)
-  let props=[]
-  let col=a:from
-  while col <= a:to
-    let cell=(col-1)/2
-    let stop=min([a:to, (cell+1)*2])
-    call add(props, {'col': col, 'length': stop-col+1,
-\                    'type': (cell+a:row) % 2 ? 'pastel_t' : 'pastel_T'})
-    let col=stop+1
-  endwhile
-  return props
+"the popup is drawn as a grid of pixels, a pixel being 1 column wide and half
+"a line high; each pixel has one of these colors:
+"  k - black, w - white, d - dark and l - light checker, c - the color shown
+"a character cell is 2 pixels high, drawn as a space if both have the same
+"color and as an upper half block (fg: upper, bg: lower) if they differ
+let s:colors=['k', 'w', 'd', 'l', 'c']
+"you should not see this, ever
+let s:color='#FF00FF'
+
+function s:Hex()
+  return {'k': g:pastel_black_bg, 'w': g:pastel_white_bg,
+\         'd': g:pastel_trans_bg, 'l': g:pastel_trans_fg, 'c': s:color}
 endfunction
 
-"background props for columns a:from to a:to of line a:row
-function s:Background(row, from, to)
-  if g:pastel_color_mode == 't'
-    return s:Checker(a:row, a:from, a:to)
-  endif
-  let type=g:pastel_color_mode == 'w' ? 'pastel_w' : 'pastel_b'
-  return [{'col': a:from, 'length': a:to-a:from+1, 'type': type}]
-endfunction
-
-function s:SetPopupContent(popup)
-  let bgh=g:pastel_bg_size / 2
-  let bgw=g:pastel_bg_size
-  let colh=g:pastel_color_size / 2
-  let colw=g:pastel_color_size
-  let totw=bgw*2+colw
-  let blank=repeat(' ', totw)
-  let popuptext=[]
-  for row in range(2*bgh+colh)
-    if row < bgh || row >= bgh+colh
-      let props=s:Background(row, 1, totw)
-    else
-      let props=s:Background(row, 1, bgw)
-\               + [{'col': bgw+1, 'length': colw, 'type': 'pastel_C'}]
-\               + s:Background(row, bgw+colw+1, totw)
-    endif
-    call add(popuptext, {'text': blank, 'props': props})
-  endfor
-  call popup_settext(a:popup, popuptext)
+function s:DefineHighlight(upper, lower)
+  let hex=s:Hex()
+  execute 'highlight pastelp'.a:upper.a:lower
+\         .' guifg='.hex[a:upper].' guibg='.hex[a:lower]
 endfunction
 
 function s:DefineHighlights()
-  execute 'highlight pastelBlack guibg='.g:pastel_black_bg
-  execute 'highlight pastelWhite guibg='.g:pastel_white_bg
-  execute 'highlight pastelTrans    guifg='.g:pastel_trans_fg
-\         .' guibg='.g:pastel_trans_bg
-  execute 'highlight pastelTransInv guifg='.g:pastel_trans_bg
-\         .' guibg='.g:pastel_trans_fg
-  "you should not see this, ever
-  highlight pastelColor guifg=#FF00FF
+  for upper in s:colors
+    for lower in s:colors
+      call s:DefineHighlight(upper, lower)
+    endfor
+  endfor
 endfunction
 
 function s:SetupPopupHilightStyles()
   call s:DefineHighlights()
-  call prop_type_add('pastel_b', {'highlight': 'pastelBlack'})
-  call prop_type_add('pastel_w', {'highlight': 'pastelWhite'})
-  call prop_type_add('pastel_t', {'highlight': 'pastelTrans'})
-  call prop_type_add('pastel_T', {'highlight': 'pastelTransInv'})
-  call prop_type_add('pastel_C', {'highlight': 'pastelColor'})
+  for upper in s:colors
+    for lower in s:colors
+      let name='pastelp'.upper.lower
+      call prop_type_add(name, {'highlight': name})
+    endfor
+  endfor
+endfunction
+
+function s:SetColor(hex)
+  let s:color=a:hex
+  for other in s:colors
+    call s:DefineHighlight('c', other)
+    call s:DefineHighlight(other, 'c')
+  endfor
+endfunction
+
+"color of pixel (a:x, a:y), counted from 0 from the popup's top left
+function s:Pixel(x, y)
+  let bg=g:pastel_bg_size
+  let size=g:pastel_color_size
+  if a:x >= bg && a:x < bg+size && a:y >= bg && a:y < bg+size
+    return 'c'
+  elseif g:pastel_color_mode == 't'
+    return (a:x+a:y) % 2 ? 'd' : 'l'
+  endif
+  return g:pastel_color_mode == 'w' ? 'w' : 'k'
+endfunction
+
+function s:SetPopupContent(popup)
+  let width=2*g:pastel_bg_size+g:pastel_color_size
+  let height=2*g:pastel_bg_size+g:pastel_color_size
+  let popuptext=[]
+  for line in range(height/2)
+    let text=''
+    let props=[]
+    for x in range(width)
+      let upper=s:Pixel(x, 2*line)
+      let lower=s:Pixel(x, 2*line+1)
+      let char=upper == lower ? ' ' : '▀'
+      let type='pastelp'.upper.lower
+      if !empty(props) && props[-1].type == type
+        let props[-1].length+=len(char)
+      else
+        call add(props, {'col': len(text)+1, 'length': len(char),
+\                        'type': type})
+      endif
+      let text.=char
+    endfor
+    call add(popuptext, {'text': text, 'props': props})
+  endfor
+  call popup_settext(a:popup, popuptext)
 endfunction
 
 "[code, start, end] of the #rrggbb code under the cursor, or []
@@ -214,7 +232,7 @@ function s:OnCursorMove() abort
   if empty(hit)
     call s:Hide()
   else
-    execute 'highlight pastelColor guibg='.hit[0]
+    call s:SetColor(hit[0])
     let pos=s:Position(hit[1], hit[2])
     if s:pastel_win
       call popup_show(s:pastel_win)
