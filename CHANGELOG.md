@@ -64,6 +64,10 @@
 - Alternating backgrounds, switched every `g:pastel_color_timer` seconds, in
     the `2` (black and white) and `3` (black, transparent and white) modes
 
+#### Fixed
+- Layouts with rows of different length (eg. `wb|t`) blanking the text under
+    the area no block covers; it is now transparent
+
 # TODO
 - Shown color formats adjustable: hexadecimal, `rgb`, `cmyk`
     (`g:pastel_detail_mode`)
