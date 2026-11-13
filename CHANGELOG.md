@@ -40,7 +40,7 @@
 - Background of the preview selectable with `g:pastel_color_mode`: `b`
     (black), `w` (white) or `t` (checkered "transparent")
 
-## 0.3.1 (planned)
+## 0.3.1
 #### Added
 - Support for odd `g:pastel_color_size` and `g:pastel_bg_size` values
 
