@@ -75,8 +75,8 @@ inverted along that axis (eg. `2` becomes `-2`). If it fits neither way, it is
 moved onto the screen.
 
 Sizes may be odd, in which case the color block starts or ends in the middle
-of a line. If the total height is odd, one extra row of background is added at
-the bottom, as a line is always two half-characters high.
+of a line. If the total height is odd, the lower half of the last line is left
+in the default color (`Normal`), as a line is always two half-characters high.
 
 ## Not yet in effect
 The following options exist, but nothing reads them yet:
