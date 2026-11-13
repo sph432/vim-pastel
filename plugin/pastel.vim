@@ -197,6 +197,10 @@ augroup pastel
   autocmd InsertEnter,BufLeave,WinLeave * call s:Hide()
   autocmd InsertLeave,WinEnter * call s:OnCursorMove()
   autocmd ColorScheme * call s:DefineHighlights()
+  "the event is not available in older Vims
+  if exists('##WinScrolled')
+    autocmd WinScrolled * call s:OnCursorMove()
+  endif
 augroup end
 
 "vim: sw=2 ts=2 et fdm=syntax
