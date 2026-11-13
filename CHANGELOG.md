@@ -84,8 +84,35 @@
 # 0.6 - more color formats (planned)
 ## 0.6.0 (planned)
 #### Added
-- Option for the position of the alpha digits, `#RRGGBBAA` or `#AARRGGBB`
-- More color notations: `#RGB`, `#RGBA`, `rgb()`, `hsl()`
+- Colors in the `#RGB` and `#RGBA` notations
+- Option for the position of the alpha digits in 8-digit codes,
+    `g:pastel_alpha_position`: `#RRGGBBAA` (`last`), `#AARRGGBB` (`first`) or
+    `auto`, which picks by filetype (`g:pastel_alpha_first_filetypes`) and says
+    so once per buffer; `b:pastel_alpha_position` overrides it per buffer
+
+#### Changed
+- Hexadecimal codes must not be preceded or followed by a letter, digit or
+    underscore: `#abcdefg1` is no longer taken for `#abcdef`, and `#define` is
+    not taken for a color
+
+## 0.6.1 (planned)
+#### Added
+- CSS `rgb()`, `rgba()`, `hsl()` and `hsla()`, in the comma and the space
+    and `/` notations
+
+## 0.6.2 (planned)
+#### Added
+- `hwb()` and `hsv()`
+
+## 0.6.3 (planned)
+#### Added
+- `lab()`, `lch()`, `oklab()` and `oklch()`; colors outside sRGB are clamped
+    to it, SEE the TODO
+
+## 0.6.4 (planned)
+#### Added
+- Colors in Sass and Less functions with a color argument, eg.
+    `rgba(#fff, 0.5)`
 
 # TODO
 - Shown color formats adjustable: hexadecimal, `rgb`, `cmyk`
@@ -95,4 +122,5 @@
 - CMY, CMYK and CMYKA notations: there is no agreed-upon syntax, not even in
     CSS
 - Make it work with other color-code detectors (eg. RRethy/vim-hexokinase)
-- Keep a test script in the repository
+- Color spaces: colors outside sRGB (eg. from `lab()` or `oklch()`) are
+    clamped to it, instead of mapped into it as CSS Color 4 specifies
