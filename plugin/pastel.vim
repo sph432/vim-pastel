@@ -40,6 +40,17 @@ let g:pastel_color_timer=get(g:, 'pastel_color_timer', 5)
 "  c - cmyk 0-255
 let g:pastel_detail_mode=get(g:, 'pastel_detail_mode', 'x')
 
+"where the alpha is in 8-digit hexadecimal codes:
+"  last  - #RRGGBBAA, as in CSS
+"  first - #AARRGGBB, as in Android
+"  auto  - first in the filetypes listed below, last in the others, with a
+"          one-time note per buffer about the guess
+"4-digit codes are always #RGBA; b:pastel_alpha_position overrides this
+"per buffer
+let g:pastel_alpha_position=get(g:, 'pastel_alpha_position', 'auto')
+let g:pastel_alpha_first_filetypes=get(g:, 'pastel_alpha_first_filetypes',
+\                                      ['java', 'kotlin', 'xml'])
+
 "size is measured vertically in half-chars, horizontally in chars
 "6/2 is how sharkdp/pastel looks
 let g:pastel_color_size=get(g:, 'pastel_color_size', 6)
@@ -296,12 +307,43 @@ function s:SetPopupContent(popup)
   endif
 endfunction
 
+"whether 8-digit codes in this buffer have the alpha first; if that is
+"guessed, say so once per buffer
+function s:AlphaFirst()
+  let setting=get(b:, 'pastel_alpha_position', g:pastel_alpha_position)
+  if setting ==# 'first'
+    return 1
+  elseif setting !=# 'auto'
+    return 0
+  endif
+  let filetypes=split(&filetype, '\.')
+  let first=!empty(filter(filetypes,
+\                        'index(g:pastel_alpha_first_filetypes, v:val) >= 0'))
+  if !exists('b:pastel_alpha_noted')
+    let b:pastel_alpha_noted=1
+    "short, as a longer message in a cursor movement is truncated by the
+    "ruler or asks for a keypress
+    let message='pastel: assuming '.(first ? '#AARRGGBB' : '#RRGGBBAA')
+\               .', see README'
+    echohl WarningMsg
+    echom strcharpart(message, 0, &columns-22)
+    echohl None
+  endif
+  return first
+endfunction
+
 "the color of a #rgb, #rgba, #rrggbb or #rrggbbaa code, as [red, green, blue,
 "alpha]
 function s:ParseHex(code)
   let digits=a:code[1:]
+  let alphafirst=0
+  if len(digits) == 4 || len(digits) == 8
+    let alphafirst=len(digits) == 8 && s:AlphaFirst()
+  endif
   if len(digits) <= 4
     let digits=join(map(split(digits, '\zs'), 'v:val.v:val'), '')
+  elseif alphafirst
+    let digits=digits[2:].digits[:1]
   endif
   let color=map(range(3), 'str2nr(digits[2*v:val:2*v:val+1], 16)')
   let alpha=len(digits) == 8 ? str2nr(digits[6:7], 16)/255.0 : 1.0

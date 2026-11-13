@@ -9,6 +9,7 @@ let s:sid=getscriptinfo({'name': 'plugin/pastel.vim'})[0].sid
 
 let s:count=0
 let s:failures=[]
+let v:errmsg=''
 
 "the plugin's script-local function a:name
 function s:Fn(name)
@@ -28,9 +29,16 @@ function s:Thousandths(color)
   return empty(a:color) ? [] : a:color[:2] + [float2nr(round(a:color[3]*1000))]
 endfunction
 
-"the color found at column a:col of a buffer holding a:text, and where
-function s:At(text, col)
+"the color found at column a:col of a buffer holding a:text, and where; the
+"buffer can have the filetype a:1 and the b:pastel_alpha_position a:2
+function s:At(text, col, ...)
   enew!
+  if a:0 >= 1
+    let &filetype=a:1
+  endif
+  if a:0 >= 2
+    let b:pastel_alpha_position=a:2
+  endif
   call setline(1, a:text)
   call cursor(1, a:col)
   let found=s:Fn('ColorAtCursor')()
@@ -59,6 +67,53 @@ call s:Check('preceded by a letter', s:At('a#fff', 3), [])
 call s:Check('preceded by a digit', s:At('1#fff', 3), [])
 call s:Check('second code', s:At('#111111 #222222', 12), [[34, 34, 34, 1000], 8, 15])
 
+"the position of the alpha: explicit, guessed from the filetype, per buffer
+let g:pastel_alpha_position='last'
+call s:Check('last', s:At('#80FF0000', 1, 'kotlin'), [[128, 255, 0, 0], 0, 9])
+call s:Check('explicit first', s:At('#80FF0000', 1, 'css', 'first'), [[255, 0, 0, 502], 0, 9])
+let g:pastel_alpha_position='first'
+call s:Check('first', s:At('#80FF0000', 1, 'css'), [[255, 0, 0, 502], 0, 9])
+call s:Check('explicit last', s:At('#80FF0000', 1, 'kotlin', 'last'), [[128, 255, 0, 0], 0, 9])
+call s:Check('#RGBA stays', s:At('#f808', 1), [[255, 136, 0, 533], 0, 5])
+call s:Check('#RRGGBB stays', s:At('#FF8800', 1), [[255, 136, 0, 1000], 0, 7])
+let g:pastel_alpha_position='auto'
+call s:Check('auto, kotlin', s:At('#80FF0000', 1, 'kotlin'), [[255, 0, 0, 502], 0, 9])
+call s:Check('auto, java', s:At('#80FF0000', 1, 'java'), [[255, 0, 0, 502], 0, 9])
+call s:Check('auto, xml', s:At('#80FF0000', 1, 'xml'), [[255, 0, 0, 502], 0, 9])
+call s:Check('auto, css', s:At('#80FF0000', 1, 'css'), [[128, 255, 0, 0], 0, 9])
+call s:Check('auto, no filetype', s:At('#80FF0000', 1), [[128, 255, 0, 0], 0, 9])
+call s:Check('auto, #RGBA in kotlin', s:At('#f808', 1, 'kotlin'), [[255, 136, 0, 533], 0, 5])
+call s:Check('auto, #RRGGBB in kotlin', s:At('#FF8800', 1, 'kotlin'), [[255, 136, 0, 1000], 0, 7])
+let g:pastel_alpha_first_filetypes=['css']
+call s:Check('auto, own filetypes', s:At('#80FF0000', 1, 'css'), [[255, 0, 0, 502], 0, 9])
+call s:Check('auto, compound filetype', s:At('#80FF0000', 1, 'html.css'), [[255, 0, 0, 502], 0, 9])
+let g:pastel_alpha_first_filetypes=['java', 'kotlin', 'xml']
+call s:Check('buffer overrides auto', s:At('#80FF0000', 1, 'kotlin', 'last'), [[128, 255, 0, 0], 0, 9])
+
+"the note about the guess: once per buffer, and only when guessing
+function s:Notes(text, ...)
+  call execute('messages clear')
+  let found=call('s:At', [a:text, 1] + a:000)
+  return len(filter(split(execute('messages'), "\n"), 'v:val =~# "assuming"'))
+endfunction
+let g:pastel_alpha_position='auto'
+call s:Check('note, 8 digits in kotlin', s:Notes('#80FF0000', 'kotlin'), 1)
+call s:Check('note, 8 digits in css', s:Notes('#80FF0000', 'css'), 1)
+call s:Check('no note, 6 digits', s:Notes('#FF8800', 'kotlin'), 0)
+call s:Check('no note, 3 digits', s:Notes('#f80', 'kotlin'), 0)
+call s:Check('no note, set to last', s:Notes('#80FF0000', 'kotlin', 'last'), 0)
+let g:pastel_alpha_position='first'
+call s:Check('no note, global first', s:Notes('#80FF0000', 'css'), 0)
+let g:pastel_alpha_position='auto'
+enew!
+call setline(1, '#80FF0000 #11223344')
+call cursor(1, 1)
+call execute('messages clear')
+call s:Fn('ColorAtCursor')()
+call cursor(1, 12)
+call s:Fn('ColorAtCursor')()
+call s:Check('note once per buffer', len(filter(split(execute('messages'), "\n"), 'v:val =~# "assuming"')), 1)
+
 "blending over a background
 let s:Blend=s:Fn('Blend')
 call s:Check('opaque', s:Blend([255, 136, 0, 1.0], '#123456'), '#FF8800')
@@ -76,6 +131,9 @@ function s:Report(lines)
   %print
 endfunction
 
+if !empty(v:errmsg)
+  call add(s:failures, 'Vim reported an error: '.v:errmsg)
+endif
 if empty(s:failures)
   call s:Report([s:count.' tests passed'])
   qall!
