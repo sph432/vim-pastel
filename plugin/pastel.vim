@@ -97,24 +97,30 @@ endfunction
 
 "the popup is drawn as a grid of pixels, a pixel being 1 column wide and half
 "a line high; each pixel has one of these colors:
-"  k - black, w - white, d - dark and l - light checker, c - the color shown,
+"  k - black, w - white, d - dark and l - light checker,
+"  1, 2, 3 and 4 - the color shown, on the background k, w, d or l,
 "  n - none, the default color, only used to pad an odd height to full lines
 "a character cell is 2 pixels high, drawn as a space if both have the same
 "color and as an upper half block (fg: upper, bg: lower) if they differ
-let s:colors=['k', 'w', 'd', 'l', 'c', 'n']
+let s:colors=['k', 'w', 'd', 'l', '1', '2', '3', '4', 'n']
+"the pixel showing the color on a background, by the background's letter
+let s:over={'k': '1', 'w': '2', 'd': '3', 'l': '4'}
 "you should not see this, ever
 let s:color='#FF00FF'
+"the colors of the pixels, by their letters above
+let s:hex={}
 
-function s:Hex()
-  return {'k': g:pastel_black_bg, 'w': g:pastel_white_bg,
-\         'd': g:pastel_trans_bg, 'l': g:pastel_trans_fg, 'c': s:color,
-\         'n': 'NONE'}
+function s:UpdateHex()
+  let s:hex={'k': g:pastel_black_bg, 'w': g:pastel_white_bg,
+\            'd': g:pastel_trans_bg, 'l': g:pastel_trans_fg, 'n': 'NONE'}
+  for background in ['k', 'w', 'd', 'l']
+    let s:hex[s:over[background]]=s:color
+  endfor
 endfunction
 
 function s:DefineHighlight(upper, lower)
-  let hex=s:Hex()
   execute 'highlight pastelp'.a:upper.a:lower
-\         .' guifg='.hex[a:upper].' guibg='.hex[a:lower]
+\         .' guifg='.s:hex[a:upper].' guibg='.s:hex[a:lower]
 endfunction
 
 "the values of the color options the highlight groups were made from
@@ -127,6 +133,7 @@ endfunction
 
 function s:DefineHighlights()
   let s:colorkey=s:ColorKey()
+  call s:UpdateHex()
   for upper in s:colors
     for lower in s:colors
       call s:DefineHighlight(upper, lower)
@@ -144,11 +151,19 @@ function s:SetupPopupHilightStyles()
   endfor
 endfunction
 
-function s:SetColor(hex)
-  let s:color=a:hex
-  for other in s:colors
-    call s:DefineHighlight('c', other)
-    call s:DefineHighlight(other, 'c')
+"make a:color, a #rrggbb code, the color shown
+function s:SetColor(color)
+  if a:color ==# s:color
+    return
+  endif
+  let s:color=a:color
+  call s:UpdateHex()
+  for upper in s:colors
+    for lower in s:colors
+      if upper =~ '\d' || lower =~ '\d'
+        call s:DefineHighlight(upper, lower)
+      endif
+    endfor
   endfor
 endfunction
 
@@ -183,14 +198,16 @@ function s:Pixel(x, y)
   endif
   let x=a:x % block
   let y=a:y % block
-  if x >= bg && x < bg+size && y >= bg && y < bg+size
-    return 'c'
-  endif
   let background=s:Background(s:layout[row][col])
   if background == 't'
-    return (x+y) % 2 ? 'd' : 'l'
+    let pixel=(x+y) % 2 ? 'd' : 'l'
+  else
+    let pixel=background == 'w' ? 'w' : 'k'
   endif
-  return background == 'w' ? 'w' : 'k'
+  if x >= bg && x < bg+size && y >= bg && y < bg+size
+    return s:over[pixel]
+  endif
+  return pixel
 endfunction
 
 "[columns, lines] of the popup; an odd height in pixels gets an extra row of
@@ -230,7 +247,7 @@ function s:SetPopupContent(popup)
     for x in range(width)
       let upper=s:Pixel(x, 2*line)
       let lower=s:Pixel(x, 2*line+1)
-      let char=upper == lower ? ' ' : '▀'
+      let char=s:hex[upper] ==? s:hex[lower] ? ' ' : '▀'
       let type='pastelp'.upper.lower
       if !empty(props) && props[-1].type == type
         let props[-1].length+=len(char)
