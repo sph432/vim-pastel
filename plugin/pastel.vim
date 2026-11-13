@@ -69,16 +69,18 @@ endif
 
 "the popup is drawn as a grid of pixels, a pixel being 1 column wide and half
 "a line high; each pixel has one of these colors:
-"  k - black, w - white, d - dark and l - light checker, c - the color shown
+"  k - black, w - white, d - dark and l - light checker, c - the color shown,
+"  n - none, the default color, only used to pad an odd height to full lines
 "a character cell is 2 pixels high, drawn as a space if both have the same
 "color and as an upper half block (fg: upper, bg: lower) if they differ
-let s:colors=['k', 'w', 'd', 'l', 'c']
+let s:colors=['k', 'w', 'd', 'l', 'c', 'n']
 "you should not see this, ever
 let s:color='#FF00FF'
 
 function s:Hex()
   return {'k': g:pastel_black_bg, 'w': g:pastel_white_bg,
-\         'd': g:pastel_trans_bg, 'l': g:pastel_trans_fg, 'c': s:color}
+\         'd': g:pastel_trans_bg, 'l': g:pastel_trans_fg, 'c': s:color,
+\         'n': 'NONE'}
 endfunction
 
 function s:DefineHighlight(upper, lower)
@@ -117,7 +119,9 @@ endfunction
 function s:Pixel(x, y)
   let bg=g:pastel_bg_size
   let size=g:pastel_color_size
-  if a:x >= bg && a:x < bg+size && a:y >= bg && a:y < bg+size
+  if a:y >= 2*bg+size
+    return 'n'
+  elseif a:x >= bg && a:x < bg+size && a:y >= bg && a:y < bg+size
     return 'c'
   elseif g:pastel_color_mode == 't'
     return (a:x+a:y) % 2 ? 'd' : 'l'
@@ -126,7 +130,7 @@ function s:Pixel(x, y)
 endfunction
 
 "[columns, lines] of the popup; an odd height in pixels gets an extra row of
-"background pixels at the bottom
+"default colored pixels at the bottom
 function s:Size()
   let size=2*g:pastel_bg_size+g:pastel_color_size
   return [size, (size+1)/2]
@@ -236,7 +240,7 @@ function s:OnCursorMove() abort
       call popup_show(s:pastel_win)
       call popup_move(s:pastel_win, pos)
     else
-      let s:pastel_win=popup_create([], pos)
+      let s:pastel_win=popup_create([], extend(pos, {'highlight': 'Normal'}))
     endif
     call s:SetPopupContent(s:pastel_win)
   endif
