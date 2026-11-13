@@ -274,7 +274,8 @@ function s:OnCursorMove() abort
       call popup_show(s:pastel_win)
       call popup_move(s:pastel_win, pos)
     else
-      let s:pastel_win=popup_create([], extend(pos, {'highlight': 'Normal'}))
+      let s:pastel_win=popup_create([], extend(pos,
+\                                 {'highlight': 'Normal', 'wrap': 0}))
     endif
     call s:SetPopupContent(s:pastel_win)
   endif
