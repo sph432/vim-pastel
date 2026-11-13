@@ -98,7 +98,7 @@
 ## 0.6.1 (planned)
 #### Added
 - CSS `rgb()`, `rgba()`, `hsl()` and `hsla()`, in the comma and the space
-    and `/` notations
+    and `/` notations, with numbers, percentages, angle units and `none`
 
 ## 0.6.2 (planned)
 #### Added
