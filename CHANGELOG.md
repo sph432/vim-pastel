@@ -109,6 +109,11 @@
 #### Added
 - Colors in Sass and Less functions with a color argument, eg.
     `rgba(#fff, 0.5)`
+- `g:pastel_ignore_filetypes`, the filetypes where no colors are looked for
+
+#### Fixed
+- Cursor movement lagging on very long lines (seconds, on lines of millions
+    of characters): lines longer than `'synmaxcol'` are not searched
 
 # 1.x - color spaces (planned)
 #### Added
