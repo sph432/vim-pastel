@@ -184,6 +184,10 @@ function s:Size()
   return [width, (height+1)/2]
 endfunction
 
+"popup masks, which make the area no block covers transparent, need this;
+"without them the text under that area is hidden
+let s:has_mask=has('patch-8.1.1580')
+
 "[col, endcol, line, endline] rectangles for the popup's mask, covering the
 "character cells without any pixels, so that the text under them is not hidden;
 "a run of such cells is added to the rectangle above it if it spans the same
@@ -231,7 +235,9 @@ function s:SetPopupContent(popup)
     call add(popuptext, {'text': text, 'props': props})
   endfor
   call popup_settext(a:popup, popuptext)
-  call popup_setoptions(a:popup, {'mask': mask})
+  if s:has_mask
+    call popup_setoptions(a:popup, {'mask': mask})
+  endif
 endfunction
 
 "[code, start, end] of the #rrggbb code under the cursor, or []
