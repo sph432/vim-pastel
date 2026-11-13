@@ -94,7 +94,7 @@ function s:SetupPopupHilightStyles()
   call prop_type_add('pastel_C', {'highlight': 'pastelColor'})
 endfunction
 
-"the #rrggbb code under the cursor, or ''
+"[code, start, end] of the #rrggbb code under the cursor, or []
 function s:ColorAtCursor()
   let line=getline('.')
   let col=col('.')-1
@@ -102,15 +102,34 @@ function s:ColorAtCursor()
   while 1
     let [color, mbeg, mend]=matchstrpos(line, '\v#\x{6}\x@!', start)
     if mbeg < 0
-      return ''
+      return []
     endif
     if col < mbeg
-      return ''
+      return []
     elseif col < mend
-      return color
+      return [color, mbeg, mend]
     endif
     let start=mend
   endwhile
+endfunction
+
+"popup position next to the code at byte range [mbeg, mend), kept on screen
+function s:Position(mbeg, mend)
+  let h=g:pastel_bg_size+g:pastel_color_size/2
+  let w=2*g:pastel_bg_size+g:pastel_color_size
+  let cur=col('.')-1
+  let [wrow, wcol]=win_screenpos(0)
+  let scrcol=wcol+wincol()-1
+  let scrrow=wrow+winline()-1
+  let first=scrcol-(cur-a:mbeg)
+  let last=scrcol+(a:mend-1-cur)
+  let left=last+2
+  if left+w-1 > &columns
+    let left=max([1, first-w-1])
+  endif
+  let top=scrrow-h/2
+  let top=max([1, min([top, &lines-&cmdheight-h+1])])
+  return {'line': top, 'col': left, 'pos': 'topleft'}
 endfunction
 
 "forget the popup if something else closed it
@@ -129,12 +148,12 @@ endfunction
 
 function s:OnCursorMove() abort
   call s:CheckPopup()
-  let color=s:ColorAtCursor()
-  if empty(color)
+  let hit=s:ColorAtCursor()
+  if empty(hit)
     call s:Hide()
   else
-    execute 'highlight pastelColor guibg='.color
-    let pos={'line': 'cursor-2', 'col': 'cursor+2', 'pos': 'topleft'}
+    execute 'highlight pastelColor guibg='.hit[0]
+    let pos=s:Position(hit[1], hit[2])
     if s:pastel_win
       call popup_show(s:pastel_win)
       call popup_move(s:pastel_win, pos)
