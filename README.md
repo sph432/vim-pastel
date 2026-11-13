@@ -40,6 +40,20 @@ These hexadecimal codes are recognized:
 not be preceded or followed by a letter, digit or underscore, so that eg.
 `#define` or `#abcdefg1` are not taken for colors.
 
+These CSS functions are recognized, in upper or lower case, with the comma
+notation (`rgb(255, 0, 0, 0.5)`) and the space and slash one
+(`rgb(255 0 0 / 50%)`):
+- `rgb()` and `rgba()`, which are the same: the channels are numbers from 0 to
+    255 or percentages, and may be mixed
+- `hsl()` and `hsla()`, which are the same: the hue is a number of degrees or
+    an angle (`deg`, `grad`, `rad`, `turn`), the saturation and the lightness
+    are percentages, or plain numbers of percents
+
+The alpha is a number from 0 to 1 or a percentage. Values out of range are
+limited to it, and a hue wraps around. The keyword `none` counts as 0, in the
+space and slash notation. A function with any other mistake, eg. a missing
+component, is ignored.
+
 A code with an alpha channel is shown blended over each background: on black
 it looks darker, on white lighter, and on the checkered background the
 checkers show through. Fully opaque (`FF`) codes look like their 6-digit
