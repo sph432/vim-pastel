@@ -26,7 +26,7 @@ The plugin does nothing, without raising errors, if Vim lacks the required
 features (SEE DEPENDENCIES) or if neither a GUI nor `termguicolors` is in use.
 
 # DEPENDENCIES
-- Vim 8.1.1553 or newer, built with `+popupwin`, `+textprop` and `+eval`
+- Vim 8.1.1580 or newer, built with `+popupwin`, `+textprop` and `+eval`
 - A GUI, or a terminal with `termguicolors` enabled
 - Neovim is not supported, as it has no popup windows
 
@@ -55,10 +55,12 @@ defaults are shown in parentheses.
 
   For example, `'t'` is a single block, `'bw'` shows black and white side by
   side, and `'t|bw'` shows a checkered block with black and white below it.
-  Each block has its own margin, and all blocks are the same size. Rows with
-  fewer blocks are padded with the default color. Blocks may split a line
-  between them: with odd sizes, the line where two rows meet shows the bottom
-  of the upper block over the top of the lower one.
+  Each block has its own margin, and all blocks are the same size. The area
+  not covered by a block, eg. right of a shorter row, is transparent: the text
+  under it stays visible. Blocks may split a line between them: with odd
+  sizes, the line where two rows meet shows the bottom of the upper block over
+  the top of the lower one. A half line that has a block on one side and
+  nothing on the other has the default color on the empty side.
 
   Any other value, for now (including a leading, trailing or doubled `|`),
   prints a warning and the plugin does not load.
