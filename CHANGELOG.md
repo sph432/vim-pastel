@@ -102,7 +102,8 @@
 
 ## 0.6.2 (planned)
 #### Added
-- `hwb()` and `hsv()`
+- `hwb()` and `hwba()` (in the space and slash notation, as in CSS), and the
+    Less `hsv()` and `hsva()`
 
 ## 0.6.3 (planned)
 #### Added
