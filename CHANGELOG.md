@@ -69,17 +69,26 @@
     the area no block covers; it is now transparent (in Vim 8.1.1580 and
     newer, older versions still blank it)
 
-# 0.5 - black is k (planned)
+# 0.5 - transparency (planned)
 ## 0.5.0 (planned)
+#### Added
+- Colors with an alpha channel (`#RRGGBBAA`), shown blended over each
+    background; on the checkered background the checkers show through
+
 #### Changed
 - The black block of `g:pastel_color_mode` is now `k`, as it was `b`; the
     default is now `'k'`. BREAKING: `b` is no longer accepted, so a
     `g:pastel_color_mode` containing it must be updated; the warning on an
     unsupported value mentions the rename
 
+# 0.6 - more color formats (planned)
+## 0.6.0 (planned)
+#### Added
+- Option for the position of the alpha digits, `#RRGGBBAA` or `#AARRGGBB`
+- More color notations: `#RGB`, `#RGBA`, `rgb()`, `hsl()`
+
 # TODO
 - Shown color formats adjustable: hexadecimal, `rgb`, `cmyk`
     (`g:pastel_detail_mode`)
-- Detect more color notations: `#RGB`, `#RRGGBBAA`, `rgb()`, `hsl()`
 - Make it work with other color-code detectors (eg. RRethy/vim-hexokinase)
 - Keep a test script in the repository
