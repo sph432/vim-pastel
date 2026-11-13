@@ -40,14 +40,20 @@ These hexadecimal codes are recognized:
 not be preceded or followed by a letter, digit or underscore, so that eg.
 `#define` or `#abcdefg1` are not taken for colors.
 
-These CSS functions are recognized, in upper or lower case, with the comma
-notation (`rgb(255, 0, 0, 0.5)`) and the space and slash one
-(`rgb(255 0 0 / 50%)`):
+These functions are recognized, in upper or lower case, with the comma notation
+(`rgb(255, 0, 0, 0.5)`) and the space and slash one (`rgb(255 0 0 / 50%)`),
+except where noted:
 - `rgb()` and `rgba()`, which are the same: the channels are numbers from 0 to
     255 or percentages, and may be mixed
 - `hsl()` and `hsla()`, which are the same: the hue is a number of degrees or
     an angle (`deg`, `grad`, `rad`, `turn`), the saturation and the lightness
     are percentages, or plain numbers of percents
+- `hwb()` and `hwba()`: the hue as in `hsl()`, the whiteness and the
+    blackness as percentages, or plain numbers of percents; as in CSS, only
+    with the space and slash notation. If they add up to 100% or more, the
+    color is a gray
+- `hsv()` and `hsva()`, as in Less.js: the hue as in `hsl()`, the saturation
+    and the value as percentages, or, as in Less, plain numbers from 0 to 1
 
 The alpha is a number from 0 to 1 or a percentage. Values out of range are
 limited to it, and a hue wraps around. The keyword `none` counts as 0, in the
