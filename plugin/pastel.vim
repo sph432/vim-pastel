@@ -113,13 +113,22 @@ function s:ColorAtCursor()
   endwhile
 endfunction
 
+"forget the popup if something else closed it
+function s:CheckPopup()
+  if s:pastel_win && empty(popup_getpos(s:pastel_win))
+    let s:pastel_win=0
+  endif
+endfunction
+
 function s:Hide()
+  call s:CheckPopup()
   if s:pastel_win
     call popup_hide(s:pastel_win)
   endif
 endfunction
 
 function s:OnCursorMove() abort
+  call s:CheckPopup()
   let color=s:ColorAtCursor()
   if empty(color)
     call s:Hide()
