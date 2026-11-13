@@ -44,6 +44,13 @@ cursor movement, so scrolling without moving the cursor leaves it in place.
 All options are global variables, set before the plugin loads. The defaults
 are shown in parentheses.
 
+- `g:pastel_color_mode` (`'b'`) - the background the color is shown on, one of:
+  - `'b'`: black
+  - `'w'`: white
+  - `'t'`: checkered "transparent" background, as in sharkdp/pastel (for now
+        a coarse checkerboard of cells 2 columns wide and 1 line high)
+
+  Any other value, for now, prints a warning and the plugin does not load.
 - `g:pastel_color_size` (`6`) - size of the color block, vertically in
     half-characters and horizontally in characters; MUST be even
 - `g:pastel_bg_size` (`2`) - size of the margin around the color block, in the
@@ -73,9 +80,8 @@ load if one is set.
 
 ## Not yet in effect
 The following options exist, but nothing reads them yet:
-`g:pastel_color_mode`, `g:pastel_color_timer`, `g:pastel_detail_mode`, and the
-white and transparent backgrounds. At the moment, the color is always shown on
-a black background. SEE [CHANGELOG.md](CHANGELOG.md) for what is planned.
+`g:pastel_color_timer` and `g:pastel_detail_mode`. Only one block is shown at
+a time. SEE [CHANGELOG.md](CHANGELOG.md) for what is planned.
 
 # TECHNICAL INFORMATION
 On every `CursorMoved`, the plugin matches `#RRGGBB` against the current line
