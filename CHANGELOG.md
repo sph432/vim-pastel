@@ -69,6 +69,14 @@
     the area no block covers; it is now transparent (in Vim 8.1.1580 and
     newer, older versions still blank it)
 
+# 0.5 - black is k (planned)
+## 0.5.0 (planned)
+#### Changed
+- The black block of `g:pastel_color_mode` is now `k`, as it was `b`; the
+    default is now `'k'`. BREAKING: `b` is no longer accepted, so a
+    `g:pastel_color_mode` containing it must be updated; the warning on an
+    unsupported value mentions the rename
+
 # TODO
 - Shown color formats adjustable: hexadecimal, `rgb`, `cmyk`
     (`g:pastel_detail_mode`)
