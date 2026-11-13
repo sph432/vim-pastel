@@ -59,13 +59,6 @@ let g:pastel_trans_fg=get(g:, 'pastel_trans_fg', '#BFBFBF') "75% gray
 let g:pastel_trans_bg=get(g:, 'pastel_trans_bg', '#404040') "25% gray
 let g:pastel_black_bg=get(g:, 'pastel_black_bg', '#000000')
 
-if g:pastel_color_size % 2 || g:pastel_bg_size % 2
-  echohl WarningMsg
-  echom 'pastel: odd sizes are not yet implemented'
-  echohl None
-  finish
-endif
-
 if index(['w', 'b', 't'], g:pastel_color_mode) < 0
   echohl WarningMsg
   echom 'pastel: unsupported g:pastel_color_mode "'.g:pastel_color_mode
@@ -132,11 +125,17 @@ function s:Pixel(x, y)
   return g:pastel_color_mode == 'w' ? 'w' : 'k'
 endfunction
 
+"[columns, lines] of the popup; an odd height in pixels gets an extra row of
+"background pixels at the bottom
+function s:Size()
+  let size=2*g:pastel_bg_size+g:pastel_color_size
+  return [size, (size+1)/2]
+endfunction
+
 function s:SetPopupContent(popup)
-  let width=2*g:pastel_bg_size+g:pastel_color_size
-  let height=2*g:pastel_bg_size+g:pastel_color_size
+  let [width, lines]=s:Size()
   let popuptext=[]
-  for line in range(height/2)
+  for line in range(lines)
     let text=''
     let props=[]
     for x in range(width)
@@ -200,8 +199,7 @@ endfunction
 
 "popup position for the code at byte range [mbeg, mend)
 function s:Position(mbeg, mend)
-  let h=g:pastel_bg_size+g:pastel_color_size/2
-  let w=2*g:pastel_bg_size+g:pastel_color_size
+  let [w, h]=s:Size()
   let cur=col('.')-1
   let [wrow, wcol]=win_screenpos(0)
   let scrcol=wcol+wincol()-1
