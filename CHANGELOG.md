@@ -34,15 +34,33 @@
     without moving the cursor (Vim 9.0 and newer, which have `WinScrolled`;
     older versions are unaffected otherwise)
 
+# 0.3 - preview backgrounds (planned)
+## 0.3.0 (planned)
+#### Added
+- Background of the preview selectable with `g:pastel_color_mode`: `b`
+    (black), `w` (white) or `t` (checkered "transparent")
+
+## 0.3.1 (planned)
+#### Added
+- Support for odd `g:pastel_color_size` and `g:pastel_bg_size` values
+
+#### Fixed
+- Checkered "transparent" background not alternating properly
+
+# 0.4 - layouts (planned)
+## 0.4.0 (planned)
+#### Added
+- Layout of previews in `g:pastel_color_mode`: several blocks side by side,
+    and `|` to start a new row; every block has its own margin
+
+## 0.4.1 (planned)
+#### Added
+- Alternating backgrounds, switched every `g:pastel_color_timer` seconds, in
+    the `2` (black and white) and `3` (black, transparent and white) modes
+
 # TODO
-- Color modes: show the color on white, black and "transparent" backgrounds
-    (`g:pastel_color_mode`: `w`, `b`, `t`, `2`, `3`, `|`)
-- Alternating multichar "transparent" background (`▀`)
-- Alternate backgrounds on a timer in the `2` and `3` modes
-    (`g:pastel_color_timer`)
 - Shown color formats adjustable: hexadecimal, `rgb`, `cmyk`
     (`g:pastel_detail_mode`)
-- Support odd `g:pastel_color_size` and `g:pastel_bg_size` values
 - Detect more color notations: `#RGB`, `#RRGGBBAA`, `rgb()`, `hsl()`
 - Make it work with other color-code detectors (eg. RRethy/vim-hexokinase)
 - Keep a test script in the repository
