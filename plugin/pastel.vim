@@ -12,6 +12,7 @@ endif
 
 "internal
 let s:pastel_win=0
+let s:warned=0
 
 "options
 "a definition of color blocks to show, from left to right
@@ -224,6 +225,12 @@ endfunction
 function s:Position(mbeg, mend)
   let [w, h]=s:Size()
   let maxline=&lines-&cmdheight
+  if (w > &columns || h > maxline) && !s:warned
+    let s:warned=1
+    echohl WarningMsg
+    echom 'pastel: the popup ('.w.'x'.h.') is larger than the screen'
+    echohl None
+  endif
   let cur=col('.')-1
   let [wrow, wcol]=win_screenpos(0)
   let scrcol=wcol+wincol()-1
