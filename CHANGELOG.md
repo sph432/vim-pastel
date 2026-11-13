@@ -69,8 +69,8 @@
     the area no block covers; it is now transparent (in Vim 8.1.1580 and
     newer, older versions still blank it)
 
-# 0.5 - transparency (planned)
-## 0.5.0 (planned)
+# 0.5 - transparency
+## 0.5.0
 #### Added
 - Colors with an alpha channel (`#RRGGBBAA`), shown blended over each
     background; on the checkered background the checkers show through
