@@ -107,13 +107,16 @@
 
 ## 0.6.3 (planned)
 #### Added
-- `lab()`, `lch()`, `oklab()` and `oklch()`; colors outside sRGB are clamped
-    to it, SEE the TODO
-
-## 0.6.4 (planned)
-#### Added
 - Colors in Sass and Less functions with a color argument, eg.
     `rgba(#fff, 0.5)`
+
+# 1.x - color spaces (planned)
+#### Added
+- `lab()`, `lch()`, `oklab()` and `oklch()`, only in the space and slash
+    notation, as in CSS Color 4
+- `color()` with the predefined color spaces, eg. `display-p3`
+- Colors outside sRGB are mapped into it as CSS Color 4 specifies, instead of
+    being clamped to it
 
 # TODO
 - Shown color formats adjustable: hexadecimal, `rgb`, `cmyk`
@@ -123,5 +126,3 @@
 - CMY, CMYK and CMYKA notations: there is no agreed-upon syntax, not even in
     CSS
 - Make it work with other color-code detectors (eg. RRethy/vim-hexokinase)
-- Color spaces: colors outside sRGB (eg. from `lab()` or `oklch()`) are
-    clamped to it, instead of mapped into it as CSS Color 4 specifies
