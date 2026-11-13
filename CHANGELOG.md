@@ -95,7 +95,7 @@
     underscore: `#abcdefg1` is no longer taken for `#abcdef`, and `#define` is
     not taken for a color
 
-## 0.6.1 (planned)
+## 0.6.1
 #### Added
 - CSS `rgb()`, `rgba()`, `hsl()` and `hsla()`, in the comma and the space
     and `/` notations, with numbers, percentages, angle units and `none`
