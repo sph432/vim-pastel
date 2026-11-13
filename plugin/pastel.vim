@@ -106,25 +106,30 @@ let s:colors=['k', 'w', 'd', 'l', '1', '2', '3', '4', 'n']
 "the pixel showing the color on a background, by the background's letter
 let s:over={'k': '1', 'w': '2', 'd': '3', 'l': '4'}
 "you should not see this, ever
-let s:color='#FF00FF'
+let s:color=[255, 0, 255, 1.0]
 "the colors of the pixels, by their letters above
 let s:hex={}
 
-"a:color, a #rrggbb or #rrggbbaa code, shown over a:background, a #rrggbb
-"color, as a #rrggbb color; the alpha is ignored if the background is not
-"a #rrggbb color
+"a color, [red, green, blue, alpha], with the channels 0 to 255 and the alpha
+"0.0 to 1.0, as a #RRGGBB string
+function s:ToHex(color)
+  return printf('#%02X%02X%02X', a:color[0], a:color[1], a:color[2])
+endfunction
+
+"a:color shown over a:background, a #rrggbb color, as a #RRGGBB string; the
+"alpha is ignored if the background is not a #rrggbb color
 function s:Blend(color, background)
-  if len(a:color) != 9 || a:background !~? '^#\x\{6}$'
-    return a:color[:6]
+  let alpha=a:color[3]
+  if alpha >= 1.0 || a:background !~? '^#\x\{6}$'
+    return s:ToHex(a:color)
   endif
-  let alpha=str2nr(a:color[7:8], 16)/255.0
-  let blended='#'
-  for i in [1, 3, 5]
-    let over=str2nr(a:color[i:i+1], 16)
-    let under=str2nr(a:background[i:i+1], 16)
-    let blended.=printf('%02X', float2nr(round(alpha*over+(1-alpha)*under)))
+  let blended=[]
+  for i in range(3)
+    let over=a:color[i]
+    let under=str2nr(a:background[2*i+1:2*i+2], 16)
+    call add(blended, float2nr(round(alpha*over+(1-alpha)*under)))
   endfor
-  return blended
+  return s:ToHex(blended)
 endfunction
 
 function s:UpdateHex()
@@ -168,9 +173,9 @@ function s:SetupPopupHilightStyles()
   endfor
 endfunction
 
-"make a:color, a #rrggbb or #rrggbbaa code, the color shown
+"make a:color, a [red, green, blue, alpha] list, the color shown
 function s:SetColor(color)
-  if a:color ==# s:color
+  if a:color == s:color
     return
   endif
   let s:color=a:color
@@ -291,23 +296,46 @@ function s:SetPopupContent(popup)
   endif
 endfunction
 
-"[code, start, end] of the #rrggbb or #rrggbbaa code under the cursor, or []
+"the color of a #rrggbb or #rrggbbaa code, as [red, green, blue, alpha]
+function s:ParseHex(code)
+  let digits=a:code[1:]
+  let color=map(range(3), 'str2nr(digits[2*v:val:2*v:val+1], 16)')
+  let alpha=len(digits) == 8 ? str2nr(digits[6:7], 16)/255.0 : 1.0
+  return color+[alpha]
+endfunction
+
+"the notations of colors: the pattern finding them in a line, and the parser
+"getting a found text's color, [red, green, blue, alpha], or [] if it is not
+"one after all
+let s:formats=[
+\ {'pattern': '\v#(\x{8}|\x{6})\x@!', 'parse': function('s:ParseHex')},
+\]
+
+"[color, start, end] of the color code under the cursor, the start and end
+"being the byte range of the code in the line, or []; if several overlap,
+"the first one, and of those the longest
 function s:ColorAtCursor()
   let line=getline('.')
   let col=col('.')-1
-  let start=0
-  while 1
-    let [color, mbeg, mend]=matchstrpos(line, '\v#(\x{8}|\x{6})\x@!', start)
-    if mbeg < 0
-      return []
-    endif
-    if col < mbeg
-      return []
-    elseif col < mend
-      return [color, mbeg, mend]
-    endif
-    let start=mend
-  endwhile
+  let found=[]
+  for format in s:formats
+    let start=0
+    while 1
+      let [text, mbeg, mend]=matchstrpos(line, format.pattern, start)
+      if mbeg < 0 || mbeg > col
+        break
+      elseif col < mend
+        let color=call(format.parse, [text])
+        if !empty(color) && (empty(found) || mbeg < found[1]
+\                            || mbeg == found[1] && mend > found[2])
+          let found=[color, mbeg, mend]
+        endif
+        break
+      endif
+      let start=mend
+    endwhile
+  endfor
+  return found
 endfunction
 
 "[start, fits] of a popup of a:size on one axis, placed relative to the anchor
