@@ -15,11 +15,14 @@
     plugin (eg. `popup_clear()`): the popup is now recreated instead of
     erroring
 
-# 0.2 - cursor behavior (planned)
-## 0.2.0 (planned)
+# 0.2 - cursor behavior
+## 0.2.0
 #### Fixed
-- Popup placement near the top line and the screen edges
-- Popup staying visible when switching windows
+- Popup covering the color code it previews; it is now placed right of the
+    code, or left of it if there is no room
+- Popup placement near the top line and the bottom and right screen edges
+- Popup not following window switches: it is hidden on leaving a window and
+    shown again on returning to a color code
 
 # TODO
 - Color modes: show the color on white, black and "transparent" backgrounds
