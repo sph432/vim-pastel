@@ -32,8 +32,16 @@ features (SEE DEPENDENCIES) or if neither a GUI nor `termguicolors` is in use.
 
 # DETAILS
 ## Detected colors
-Only 6-digit hexadecimal codes (`#RRGGBB`) are recognized. A code directly
-followed by more hexadecimal digits is not treated as a color.
+Hexadecimal codes with 6 digits (`#RRGGBB`) and with 8 digits (`#RRGGBBAA`) are
+recognized. A code directly followed by more hexadecimal digits is not treated
+as a color.
+
+A code with an alpha channel is shown blended over each background: on black
+it looks darker, on white lighter, and on the checkered background the
+checkers show through. Fully opaque (`FF`) codes look like their 6-digit
+form, and `00` shows the background alone. The blending is done directly on
+the sRGB values. If you set a background color option to something other than
+a `#RRGGBB` color, the alpha is ignored for that background.
 
 ## Scrolling
 In Vims that have the `WinScrolled` event (8.2.4713 and newer), the popup
@@ -119,11 +127,17 @@ The option `g:pastel_detail_mode` exists, but nothing reads it yet. SEE
 [CHANGELOG.md](CHANGELOG.md) for what is planned.
 
 # TECHNICAL INFORMATION
-On every `CursorMoved`, the plugin matches `#RRGGBB` against the current line
-at the cursor column. If the cursor is on a code, a highlight group is updated
-with the color, and a single reused popup window is moved next to the cursor.
-The popup content is built from text properties, using the color on a
-configurable background.
+On every `CursorMoved`, the plugin matches `#RRGGBB` or `#RRGGBBAA` against the
+current line at the cursor column. If the cursor is on a code, the color is
+blended over each of the four background colors (black, white and the two
+checker colors), the highlight groups for the popup are updated, and a single
+reused popup window is moved next to the cursor.
+
+The popup is drawn as a grid of pixels, each one column wide and half a line
+high. A character cell holds two pixels: a space if they have the same color,
+or an upper half block with the upper pixel as its foreground and the lower
+one as its background if they differ. The content is built from text
+properties.
 
 # META
 ## LICENSE
