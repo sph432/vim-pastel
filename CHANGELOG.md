@@ -29,6 +29,11 @@
 - Popup placement preferences `g:pastel_offset_x` and `g:pastel_offset_y`; the
     offset is inverted along an axis where the popup would not fit
 
+#### Fixed
+- Popup staying at its old screen position when the window is scrolled
+    without moving the cursor (Vim 9.0 and newer, which have `WinScrolled`;
+    older versions are unaffected otherwise)
+
 # TODO
 - Color modes: show the color on white, black and "transparent" backgrounds
     (`g:pastel_color_mode`: `w`, `b`, `t`, `2`, `3`, `|`)
