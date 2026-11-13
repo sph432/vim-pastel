@@ -21,13 +21,13 @@ let s:pastel_win=0
 "  t - color on checkered "transparent" background
 "  2 - b and w alternating
 "  3 - b, t and w alternating (in that order)
-"  | - put blocks right of it in a new line
+"  | - put the blocks following it in a new row
 "
-"blocks are of the same size (see below)
+"blocks are of the same size (see below), each with its own margin
 " sharkdp/pastel's look would be "t",
-" other suggested combinations are "2t" "2|t" and "3"
+" other suggested combinations are "bw", "t|bw" and "wbt"
 "
-"only a single w, b or t is supported for now
+"2 and 3 are not supported yet
 let g:pastel_color_mode=get(g:, 'pastel_color_mode', 'b')
 
 "alternate between backgrounds every n seconds in "2" and "3" blocks
@@ -59,13 +59,17 @@ let g:pastel_trans_fg=get(g:, 'pastel_trans_fg', '#BFBFBF') "75% gray
 let g:pastel_trans_bg=get(g:, 'pastel_trans_bg', '#404040') "25% gray
 let g:pastel_black_bg=get(g:, 'pastel_black_bg', '#000000')
 
-if index(['w', 'b', 't'], g:pastel_color_mode) < 0
+if g:pastel_color_mode !~# '^[wbt]\+\(|[wbt]\+\)*$'
   echohl WarningMsg
   echom 'pastel: unsupported g:pastel_color_mode "'.g:pastel_color_mode
-\       .'", only a single w, b or t is supported for now'
+\       .'", only w, b, t and | (not leading, trailing or doubled) are'
+\       .' supported for now'
   echohl None
   finish
 endif
+
+"the blocks of g:pastel_color_mode: a list of rows, each a list of w, b or t
+let s:layout=map(split(g:pastel_color_mode, '|'), 'split(v:val, ''\zs'')')
 
 "the popup is drawn as a grid of pixels, a pixel being 1 column wide and half
 "a line high; each pixel has one of these colors:
@@ -115,25 +119,38 @@ function s:SetColor(hex)
   endfor
 endfunction
 
-"color of pixel (a:x, a:y), counted from 0 from the popup's top left
+"size of a block in pixels, both ways
+function s:BlockSize()
+  return 2*g:pastel_bg_size+g:pastel_color_size
+endfunction
+
+"color of pixel (a:x, a:y), counted from 0 from the popup's top left; pixels
+"outside the blocks, and so the padding of an odd height, are default colored
 function s:Pixel(x, y)
   let bg=g:pastel_bg_size
   let size=g:pastel_color_size
-  if a:y >= 2*bg+size
+  let block=s:BlockSize()
+  let row=a:y / block
+  let col=a:x / block
+  if row >= len(s:layout) || col >= len(s:layout[row])
     return 'n'
-  elseif a:x >= bg && a:x < bg+size && a:y >= bg && a:y < bg+size
-    return 'c'
-  elseif g:pastel_color_mode == 't'
-    return (a:x+a:y) % 2 ? 'd' : 'l'
   endif
-  return g:pastel_color_mode == 'w' ? 'w' : 'k'
+  let x=a:x % block
+  let y=a:y % block
+  if x >= bg && x < bg+size && y >= bg && y < bg+size
+    return 'c'
+  elseif s:layout[row][col] == 't'
+    return (x+y) % 2 ? 'd' : 'l'
+  endif
+  return s:layout[row][col] == 'w' ? 'w' : 'k'
 endfunction
 
 "[columns, lines] of the popup; an odd height in pixels gets an extra row of
 "default colored pixels at the bottom
 function s:Size()
-  let size=2*g:pastel_bg_size+g:pastel_color_size
-  return [size, (size+1)/2]
+  let width=max(map(copy(s:layout), 'len(v:val)'))*s:BlockSize()
+  let height=len(s:layout)*s:BlockSize()
+  return [width, (height+1)/2]
 endfunction
 
 function s:SetPopupContent(popup)
