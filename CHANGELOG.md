@@ -34,8 +34,8 @@
     without moving the cursor (Vim 9.0 and newer, which have `WinScrolled`;
     older versions are unaffected otherwise)
 
-# 0.3 - preview backgrounds (planned)
-## 0.3.0 (planned)
+# 0.3 - preview backgrounds
+## 0.3.0
 #### Added
 - Background of the preview selectable with `g:pastel_color_mode`: `b`
     (black), `w` (white) or `t` (checkered "transparent")
