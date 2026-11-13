@@ -184,12 +184,28 @@ function s:Size()
   return [width, (height+1)/2]
 endfunction
 
+"[col, endcol, line, endline] rectangles for the popup's mask, covering the
+"character cells without any pixels, so that the text under them is not hidden;
+"a run of such cells is added to the rectangle above it if it spans the same
+"columns
+function s:AddEmptyCells(rects, line, from, to)
+  for rect in a:rects
+    if rect[0] == a:from && rect[1] == a:to && rect[3] == a:line-1
+      let rect[3]=a:line
+      return
+    endif
+  endfor
+  call add(a:rects, [a:from, a:to, a:line, a:line])
+endfunction
+
 function s:SetPopupContent(popup)
   let [width, lines]=s:Size()
   let popuptext=[]
+  let mask=[]
   for line in range(lines)
     let text=''
     let props=[]
+    let runstart=0
     for x in range(width)
       let upper=s:Pixel(x, 2*line)
       let lower=s:Pixel(x, 2*line+1)
@@ -202,10 +218,20 @@ function s:SetPopupContent(popup)
 \                        'type': type})
       endif
       let text.=char
+      if upper == 'n' && lower == 'n'
+        let runstart=runstart ? runstart : x+1
+      elseif runstart
+        call s:AddEmptyCells(mask, line+1, runstart, x)
+        let runstart=0
+      endif
     endfor
+    if runstart
+      call s:AddEmptyCells(mask, line+1, runstart, width)
+    endif
     call add(popuptext, {'text': text, 'props': props})
   endfor
   call popup_settext(a:popup, popuptext)
+  call popup_setoptions(a:popup, {'mask': mask})
 endfunction
 
 "[code, start, end] of the #rrggbb code under the cursor, or []
