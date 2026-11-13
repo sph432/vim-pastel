@@ -81,8 +81,8 @@
     `g:pastel_color_mode` containing it must be updated; the warning on an
     unsupported value mentions the rename
 
-# 0.6 - more color formats (planned)
-## 0.6.0 (planned)
+# 0.6 - more color formats
+## 0.6.0
 #### Added
 - Colors in the `#RGB` and `#RGBA` notations
 - Option for the position of the alpha digits in 8-digit codes,
