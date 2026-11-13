@@ -67,6 +67,26 @@ call s:Check('preceded by a letter', s:At('a#fff', 3), [])
 call s:Check('preceded by a digit', s:At('1#fff', 3), [])
 call s:Check('second code', s:At('#111111 #222222', 12), [[34, 34, 34, 1000], 8, 15])
 
+"where no colors are looked for: long lines and ignored filetypes
+let s:long=repeat(' ', 2990).'#fff'
+call s:Check('line within synmaxcol', s:At(s:long, 2992), [[255, 255, 255, 1000], 2990, 2994])
+call s:Check('line beyond synmaxcol', s:At(repeat(' ', 3000).'#fff', 3002), [])
+set synmaxcol=0
+call s:Check('no synmaxcol', s:At(repeat(' ', 3000).'#fff', 3002), [[255, 255, 255, 1000], 3000, 3004])
+set synmaxcol=10
+call s:Check('small synmaxcol', s:At('          #fff', 12), [])
+call s:Check('line within small synmaxcol', s:At('#fff', 2), [[255, 255, 255, 1000], 0, 4])
+set synmaxcol=3000
+let g:pastel_ignore_filetypes=['sql', 'gitcommit']
+call s:Check('ignored filetype', s:At('#fff', 2, 'sql'), [])
+call s:Check('another ignored filetype', s:At('fixes #123', 9, 'gitcommit'), [])
+call s:Check('ignored compound filetype', s:At('#fff', 2, 'html.sql'), [])
+call s:Check('other filetype', s:At('#fff', 2, 'css'), [[255, 255, 255, 1000], 0, 4])
+call s:Check('no filetype', s:At('#fff', 2), [[255, 255, 255, 1000], 0, 4])
+let g:pastel_ignore_filetypes=[]
+call s:Check('nothing ignored', s:At('#fff', 2, 'sql'), [[255, 255, 255, 1000], 0, 4])
+call s:Check('issue number in a commit message', s:At('fixes #123', 9, 'gitcommit'), [[17, 34, 51, 1000], 6, 10])
+
 "CSS functions, in the comma notation and the space and slash one
 let s:T=function('s:Thousandths')
 function s:Css(text)
