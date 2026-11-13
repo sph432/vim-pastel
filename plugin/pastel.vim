@@ -60,17 +60,38 @@ let g:pastel_trans_fg=get(g:, 'pastel_trans_fg', '#BFBFBF') "75% gray
 let g:pastel_trans_bg=get(g:, 'pastel_trans_bg', '#404040') "25% gray
 let g:pastel_black_bg=get(g:, 'pastel_black_bg', '#000000')
 
-if g:pastel_color_mode !~# '^[wbt]\+\(|[wbt]\+\)*$'
-  echohl WarningMsg
-  echom 'pastel: unsupported g:pastel_color_mode "'.g:pastel_color_mode
-\       .'", only w, b, t and | (not leading, trailing or doubled) are'
-\       .' supported for now'
-  echohl None
+"the blocks of a g:pastel_color_mode value: a list of rows, each a list of w,
+"b or t; empty (and a warning is shown) if the value is not supported
+function s:ParseLayout(mode)
+  if string(a:mode) !~# '^''[wbt]\+\(|[wbt]\+\)*''$'
+    echohl WarningMsg
+    echom 'pastel: unsupported g:pastel_color_mode '.string(a:mode)
+\         .', only w, b, t and | (not leading, trailing or doubled) are'
+\         .' supported for now'
+    echohl None
+    return []
+  endif
+  return map(split(a:mode, '|'), 'split(v:val, ''\zs'')')
+endfunction
+
+let s:layout=s:ParseLayout(g:pastel_color_mode)
+if empty(s:layout)
   finish
 endif
+"the value s:layout was made from
+let s:mode=g:pastel_color_mode
 
-"the blocks of g:pastel_color_mode: a list of rows, each a list of w, b or t
-let s:layout=map(split(g:pastel_color_mode, '|'), 'split(v:val, ''\zs'')')
+"follow changes of g:pastel_color_mode; an unsupported value is warned about
+"once and the previous layout stays
+function s:UpdateLayout()
+  if string(g:pastel_color_mode) !=# string(s:mode)
+    let s:mode=g:pastel_color_mode
+    let layout=s:ParseLayout(s:mode)
+    if !empty(layout)
+      let s:layout=layout
+    endif
+  endif
+endfunction
 
 "the popup is drawn as a grid of pixels, a pixel being 1 column wide and half
 "a line high; each pixel has one of these colors:
@@ -264,6 +285,7 @@ endfunction
 
 function s:OnCursorMove() abort
   call s:CheckPopup()
+  call s:UpdateLayout()
   let hit=s:ColorAtCursor()
   if empty(hit)
     call s:Hide()
