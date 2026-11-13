@@ -90,5 +90,9 @@
 # TODO
 - Shown color formats adjustable: hexadecimal, `rgb`, `cmyk`
     (`g:pastel_detail_mode`)
+- Color notations from outside the web: no source of truth was surveyed yet
+    (eg. languages' color literals, X11 `rgb:RR/GG/BB`, LaTeX)
+- CMY, CMYK and CMYKA notations: there is no agreed-upon syntax, not even in
+    CSS
 - Make it work with other color-code detectors (eg. RRethy/vim-hexokinase)
 - Keep a test script in the repository
