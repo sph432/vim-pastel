@@ -25,6 +25,10 @@ Any other plugin manager, or Vim's native package directory
 The plugin does nothing, without raising errors, if Vim lacks the required
 features (SEE DEPENDENCIES) or if neither a GUI nor `termguicolors` is in use.
 
+The documentation is also available inside Vim as `:help pastel`. Plugin
+managers generate its tags; with a native package directory, run
+`:helptags ALL` once.
+
 # DEPENDENCIES
 - Vim 8.1.1553 or newer, built with `+popupwin`, `+textprop` and `+eval`
 - A GUI, or a terminal with `termguicolors` enabled
@@ -164,8 +168,10 @@ The option `g:pastel_detail_mode` exists, but nothing reads it yet. SEE
 [CHANGELOG.md](CHANGELOG.md) for what is planned.
 
 # TECHNICAL INFORMATION
-On every `CursorMoved`, the plugin matches `#RRGGBB` or `#RRGGBBAA` against the
-current line at the cursor column. If the cursor is on a code, the color is
+On every `CursorMoved`, the plugin matches the notations of colors (the
+hexadecimal codes and the functions) against the current line at the cursor
+column. Each notation is a pattern finding candidates and a parser turning one
+into a color, `[red, green, blue, alpha]`. If the cursor is on a color, it is
 blended over each of the four background colors (black, white and the two
 checker colors), the highlight groups for the popup are updated, and a single
 reused popup window is moved next to the cursor.
