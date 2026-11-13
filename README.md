@@ -35,6 +35,11 @@ features (SEE DEPENDENCIES) or if neither a GUI nor `termguicolors` is in use.
 Only 6-digit hexadecimal codes (`#RRGGBB`) are recognized. A code directly
 followed by more hexadecimal digits is not treated as a color.
 
+## Scrolling
+In Vims that have the `WinScrolled` event (9.0 and newer), the popup follows
+the code when the window is scrolled. Older versions only update the popup on
+cursor movement, so scrolling without moving the cursor leaves it in place.
+
 ## Configuration
 All options are global variables, set before the plugin loads. The defaults
 are shown in parentheses.
