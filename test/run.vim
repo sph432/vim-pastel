@@ -79,7 +79,7 @@ call s:Check('#RRGGBB stays', s:At('#FF8800', 1), [[255, 136, 0, 1000], 0, 7])
 let g:pastel_alpha_position='auto'
 call s:Check('auto, kotlin', s:At('#80FF0000', 1, 'kotlin'), [[255, 0, 0, 502], 0, 9])
 call s:Check('auto, java', s:At('#80FF0000', 1, 'java'), [[255, 0, 0, 502], 0, 9])
-call s:Check('auto, xml', s:At('#80FF0000', 1, 'xml'), [[255, 0, 0, 502], 0, 9])
+call s:Check('auto, xml', s:At('#80FF0000', 1, 'xml'), [[128, 255, 0, 0], 0, 9])
 call s:Check('auto, css', s:At('#80FF0000', 1, 'css'), [[128, 255, 0, 0], 0, 9])
 call s:Check('auto, no filetype', s:At('#80FF0000', 1), [[128, 255, 0, 0], 0, 9])
 call s:Check('auto, #RGBA in kotlin', s:At('#f808', 1, 'kotlin'), [[255, 136, 0, 533], 0, 5])
@@ -87,7 +87,7 @@ call s:Check('auto, #RRGGBB in kotlin', s:At('#FF8800', 1, 'kotlin'), [[255, 136
 let g:pastel_alpha_first_filetypes=['css']
 call s:Check('auto, own filetypes', s:At('#80FF0000', 1, 'css'), [[255, 0, 0, 502], 0, 9])
 call s:Check('auto, compound filetype', s:At('#80FF0000', 1, 'html.css'), [[255, 0, 0, 502], 0, 9])
-let g:pastel_alpha_first_filetypes=['java', 'kotlin', 'xml']
+let g:pastel_alpha_first_filetypes=['java', 'kotlin']
 call s:Check('buffer overrides auto', s:At('#80FF0000', 1, 'kotlin', 'last'), [[128, 255, 0, 0], 0, 9])
 
 "the note about the guess: once per buffer, and only when guessing

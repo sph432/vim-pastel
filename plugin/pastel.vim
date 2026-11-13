@@ -49,7 +49,7 @@ let g:pastel_detail_mode=get(g:, 'pastel_detail_mode', 'x')
 "per buffer
 let g:pastel_alpha_position=get(g:, 'pastel_alpha_position', 'auto')
 let g:pastel_alpha_first_filetypes=get(g:, 'pastel_alpha_first_filetypes',
-\                                      ['java', 'kotlin', 'xml'])
+\                                      ['java', 'kotlin'])
 
 "size is measured vertically in half-chars, horizontally in chars
 "6/2 is how sharkdp/pastel looks

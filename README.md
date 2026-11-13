@@ -107,7 +107,7 @@ defaults are shown in parentheses.
   The variable `b:pastel_alpha_position`, if set, takes precedence in its
   buffer; eg. `autocmd FileType cs let b:pastel_alpha_position='first'`. The
   4-digit form is not affected, as it is always `#RGBA`.
-- `g:pastel_alpha_first_filetypes` (`['java', 'kotlin', 'xml']`) - the filetypes
+- `g:pastel_alpha_first_filetypes` (`['java', 'kotlin']`) - the filetypes
     where `'auto'` means `'first'`
 - `g:pastel_offset_x` (`2`) - horizontal placement of the popup relative to the
     color code, in characters:
