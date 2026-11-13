@@ -59,7 +59,7 @@
 - One-time warning when the popup is larger than the screen; such a popup is
     clipped, not wrapped
 
-## 0.4.1 (planned)
+## 0.4.1
 #### Added
 - Alternating backgrounds, switched every `g:pastel_color_timer` seconds, in
     the `2` (black and white) and `3` (black, transparent and white) modes
