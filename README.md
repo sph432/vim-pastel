@@ -45,7 +45,7 @@ versions.
     is only updated on cursor movement; scrolling the window without moving
     the cursor leaves the popup at its old position on the screen.
 - In Vims older than 8.1.1580, which lack popup masks, the area of a layout
-    that no block covers (eg. right of the shorter row of `'wb|t'`) hides the
+    that no block covers (eg. right of the shorter row of `'wk|t'`) hides the
     text under it, instead of being transparent. A single row of blocks is not
     affected.
 
@@ -54,9 +54,9 @@ All options are global variables, set in your `.vimrc` or at any time later
 with `:let`; a change takes effect the next time the popup is shown. The
 defaults are shown in parentheses.
 
-- `g:pastel_color_mode` (`'b'`) - the previews to show and their layout, a
+- `g:pastel_color_mode` (`'k'`) - the previews to show and their layout, a
     string of block letters, left to right:
-  - `b`: the color on black
+  - `k`: the color on black
   - `w`: the color on white
   - `t`: the color on a checkered "transparent" background, as in
         sharkdp/pastel
@@ -64,8 +64,8 @@ defaults are shown in parentheses.
   - `3`: the color on black, checkered and white, alternating, in that order
   - `|`: the blocks after it go in a new row below
 
-  For example, `'t'` is a single block, `'bw'` shows black and white side by
-  side, and `'t|bw'` shows a checkered block with black and white below it.
+  For example, `'t'` is a single block, `'kw'` shows black and white side by
+  side, and `'t|kw'` shows a checkered block with black and white below it.
   Each block has its own margin, and all blocks are the same size. The area
   not covered by a block, eg. right of a shorter row, is transparent: the text
   under it stays visible. Blocks may split a line between them: with odd
