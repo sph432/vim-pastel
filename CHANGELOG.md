@@ -47,8 +47,8 @@
 #### Fixed
 - Checkered "transparent" background not alternating properly
 
-# 0.4 - layouts (planned)
-## 0.4.0 (planned)
+# 0.4 - layouts
+## 0.4.0
 #### Added
 - Layout of previews in `g:pastel_color_mode`: several blocks side by side,
     and `|` to start a new row; every block has its own margin
