@@ -9,7 +9,7 @@
 - Plugin skips loading, instead of erroring, without `+popupwin`, `+textprop`
     or truecolor support
 
-## 0.1.1 (planned)
+## 0.1.1
 #### Fixed
 - Stale popup handle when the popup is closed by something other than the
     plugin (eg. `popup_clear()`): the popup is now recreated instead of
