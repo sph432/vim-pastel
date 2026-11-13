@@ -41,8 +41,9 @@ the code when the window is scrolled. Older versions only update the popup on
 cursor movement, so scrolling without moving the cursor leaves it in place.
 
 ## Configuration
-All options are global variables, set before the plugin loads. The defaults
-are shown in parentheses.
+All options are global variables, set in your `.vimrc` or at any time later
+with `:let`; a change takes effect the next time the popup is shown. The
+defaults are shown in parentheses.
 
 - `g:pastel_color_mode` (`'b'`) - the previews to show and their layout, a
     string of block letters, left to right:
