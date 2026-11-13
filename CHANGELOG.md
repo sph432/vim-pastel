@@ -66,7 +66,8 @@
 
 #### Fixed
 - Layouts with rows of different length (eg. `wb|t`) blanking the text under
-    the area no block covers; it is now transparent
+    the area no block covers; it is now transparent (in Vim 8.1.1580 and
+    newer, older versions still blank it)
 
 # TODO
 - Shown color formats adjustable: hexadecimal, `rgb`, `cmyk`
