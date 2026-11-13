@@ -115,7 +115,16 @@ function s:DefineHighlight(upper, lower)
 \         .' guifg='.hex[a:upper].' guibg='.hex[a:lower]
 endfunction
 
+"the values of the color options the highlight groups were made from
+let s:colorkey=''
+
+function s:ColorKey()
+  return join([g:pastel_black_bg, g:pastel_white_bg, g:pastel_trans_bg,
+\              g:pastel_trans_fg])
+endfunction
+
 function s:DefineHighlights()
+  let s:colorkey=s:ColorKey()
   for upper in s:colors
     for lower in s:colors
       call s:DefineHighlight(upper, lower)
@@ -286,6 +295,9 @@ endfunction
 function s:OnCursorMove() abort
   call s:CheckPopup()
   call s:UpdateLayout()
+  if s:ColorKey() !=# s:colorkey
+    call s:DefineHighlights()
+  endif
   let hit=s:ColorAtCursor()
   if empty(hit)
     call s:Hide()
