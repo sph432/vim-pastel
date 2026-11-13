@@ -52,6 +52,10 @@
 #### Added
 - Layout of previews in `g:pastel_color_mode`: several blocks side by side,
     and `|` to start a new row; every block has its own margin
+- Popup placed below or above the code's line when there is no room on either
+    side of it, instead of covering the code
+- One-time warning when the popup is larger than the screen; such a popup is
+    clipped, not wrapped
 
 ## 0.4.1 (planned)
 #### Added
