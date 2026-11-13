@@ -31,8 +31,8 @@
 
 #### Fixed
 - Popup staying at its old screen position when the window is scrolled
-    without moving the cursor (Vim 9.0 and newer, which have `WinScrolled`;
-    older versions are unaffected otherwise)
+    without moving the cursor (Vim 8.2.4713 and newer, which have
+    `WinScrolled`; older versions still leave it in place)
 
 # 0.3 - preview backgrounds
 ## 0.3.0
