@@ -169,8 +169,8 @@ call s:SetupPopupHilightStyles()
 augroup pastel
   autocmd!
   autocmd CursorMoved * call s:OnCursorMove()
-  autocmd InsertEnter,BufLeave * call s:Hide()
-  autocmd InsertLeave * call s:OnCursorMove()
+  autocmd InsertEnter,BufLeave,WinLeave * call s:Hide()
+  autocmd InsertLeave,WinEnter * call s:OnCursorMove()
   autocmd ColorScheme * call s:DefineHighlights()
 augroup end
 
