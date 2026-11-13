@@ -43,10 +43,25 @@ are shown in parentheses.
     half-characters and horizontally in characters; MUST be even
 - `g:pastel_bg_size` (`2`) - size of the margin around the color block, in the
     same units; MUST be even
+- `g:pastel_offset_x` (`2`) - horizontal placement of the popup relative to the
+    color code, in characters:
+  - positive: right of the code, its left edge that many columns after the
+        code's last column
+  - negative: left of the code, its right edge that many columns before the
+        code's first column
+  - `0`: centered on the code
+- `g:pastel_offset_y` (`0`) - vertical placement relative to the cursor line:
+  - positive: below, its top edge that many rows below the line
+  - negative: above, its bottom edge that many rows above the line
+  - `0`: centered on the line
 - `g:pastel_black_bg` (`'#000000'`) - background color of the black preview
 - `g:pastel_white_bg` (`'#FFFFFF'`) - background color of the white preview
 - `g:pastel_trans_fg` (`'#BFBFBF'`) and `g:pastel_trans_bg` (`'#404040'`) -
     the two colors of the checkered "transparent" background
+
+If the popup does not fit on the screen at the requested offset, the offset is
+inverted along that axis (eg. `2` becomes `-2`). If it fits neither way, it is
+moved onto the screen.
 
 Odd sizes are not implemented yet; the plugin prints a warning and does not
 load if one is set.
