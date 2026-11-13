@@ -26,12 +26,11 @@ let s:warned=0
 "
 "blocks are of the same size (see below), each with its own margin
 " sharkdp/pastel's look would be "t",
-" other suggested combinations are "bw", "t|bw" and "wbt"
-"
-"2 and 3 are not supported yet
+" other suggested combinations are "2t", "t|bw" and "3"
 let g:pastel_color_mode=get(g:, 'pastel_color_mode', 'b')
 
-"alternate between backgrounds every n seconds in "2" and "3" blocks
+"alternate between backgrounds every n seconds in "2" and "3" blocks, 0.1 or
+"more; less than that turns alternating off, showing the first background
 let g:pastel_color_timer=get(g:, 'pastel_color_timer', 5)
 
 "a definition of color codes to show, from top to bottom
@@ -61,13 +60,13 @@ let g:pastel_trans_bg=get(g:, 'pastel_trans_bg', '#404040') "25% gray
 let g:pastel_black_bg=get(g:, 'pastel_black_bg', '#000000')
 
 "the blocks of a g:pastel_color_mode value: a list of rows, each a list of w,
-"b or t; empty (and a warning is shown) if the value is not supported
+"b, t, 2 or 3; empty (and a warning is shown) if the value is not supported
 function s:ParseLayout(mode)
-  if string(a:mode) !~# '^''[wbt]\+\(|[wbt]\+\)*''$'
+  if string(a:mode) !~# '^''[wbt23]\+\(|[wbt23]\+\)*''$'
     echohl WarningMsg
     echom 'pastel: unsupported g:pastel_color_mode '.string(a:mode)
-\         .', only w, b, t and | (not leading, trailing or doubled) are'
-\         .' supported for now'
+\         .', only w, b, t, 2, 3 and | (not leading, trailing or doubled)'
+\         .' are supported'
     echohl None
     return []
   endif
@@ -157,6 +156,19 @@ endfunction
 
 "color of pixel (a:x, a:y), counted from 0 from the popup's top left; pixels
 "outside the blocks, and so the padding of an odd height, are default colored
+"how many timer ticks the alternating blocks have advanced
+let s:phase=0
+
+"the background, w, b or t, of a block of g:pastel_color_mode
+function s:Background(block)
+  if a:block == '2'
+    return ['b', 'w'][s:phase % 2]
+  elseif a:block == '3'
+    return ['b', 't', 'w'][s:phase % 3]
+  endif
+  return a:block
+endfunction
+
 function s:Pixel(x, y)
   let bg=g:pastel_bg_size
   let size=g:pastel_color_size
@@ -170,10 +182,12 @@ function s:Pixel(x, y)
   let y=a:y % block
   if x >= bg && x < bg+size && y >= bg && y < bg+size
     return 'c'
-  elseif s:layout[row][col] == 't'
+  endif
+  let background=s:Background(s:layout[row][col])
+  if background == 't'
     return (x+y) % 2 ? 'd' : 'l'
   endif
-  return s:layout[row][col] == 'w' ? 'w' : 'k'
+  return background == 'w' ? 'w' : 'k'
 endfunction
 
 "[columns, lines] of the popup; an odd height in pixels gets an extra row of
@@ -317,7 +331,44 @@ function s:CheckPopup()
   endif
 endfunction
 
+"the timer advancing alternating blocks, only running while it is needed
+let s:timer=0
+let s:timer_ms=0
+
+function s:StopTimer()
+  if s:timer
+    call timer_stop(s:timer)
+    let s:timer=0
+    let s:timer_ms=0
+  endif
+endfunction
+
+function s:OnTimer(id)
+  call s:CheckPopup()
+  if !s:pastel_win || !popup_getpos(s:pastel_win).visible
+    call s:StopTimer()
+    return
+  endif
+  let s:phase+=1
+  call s:SetPopupContent(s:pastel_win)
+endfunction
+
+"run the timer if the layout has alternating blocks and the interval is valid
+"(it is read every time, so changes take effect), else stop it
+function s:UpdateTimer()
+  let ms=float2nr(str2float(string(g:pastel_color_timer))*1000)
+  if ms < 100 || string(s:layout) !~ '[23]'
+    call s:StopTimer()
+    let s:phase=0
+  elseif !s:timer || ms != s:timer_ms
+    call s:StopTimer()
+    let s:timer=timer_start(ms, function('s:OnTimer'), {'repeat': -1})
+    let s:timer_ms=ms
+  endif
+endfunction
+
 function s:Hide()
+  call s:StopTimer()
   call s:CheckPopup()
   if s:pastel_win
     call popup_hide(s:pastel_win)
@@ -343,6 +394,7 @@ function s:OnCursorMove() abort
       let s:pastel_win=popup_create([], extend(pos,
 \                                 {'highlight': 'Normal', 'wrap': 0}))
     endif
+    call s:UpdateTimer()
     call s:SetPopupContent(s:pastel_win)
   endif
 endfunction
