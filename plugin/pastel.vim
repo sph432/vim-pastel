@@ -196,9 +196,10 @@ function s:ColorAtCursor()
   endwhile
 endfunction
 
-"start of a popup of a:size on one axis, placed relative to the anchor
+"[start, fits] of a popup of a:size on one axis, placed relative to the anchor
 "positions [a:first, a:last] by offset a:off (SEE g:pastel_offset_x/y);
-"the offset is inverted if the popup would not fit in 1..a:limit
+"the offset is inverted if the popup would not fit in 1..a:limit; if it fits
+"neither way, it is moved into 1..a:limit as far as possible and fits is 0
 function s:Axis(first, last, size, off, limit)
   let starts=[]
   for off in [a:off, -a:off]
@@ -212,22 +213,31 @@ function s:Axis(first, last, size, off, limit)
   endfor
   for start in starts
     if start >= 1 && start+a:size-1 <= a:limit
-      return start
+      return [start, 1]
     endif
   endfor
-  return max([1, min([starts[0], a:limit-a:size+1])])
+  return [max([1, min([starts[0], a:limit-a:size+1])]), 0]
 endfunction
 
-"popup position for the code at byte range [mbeg, mend)
+"popup position for the code at byte range [mbeg, mend); if there is no room
+"on either side of the code, the popup goes above or below its line instead
 function s:Position(mbeg, mend)
   let [w, h]=s:Size()
+  let maxline=&lines-&cmdheight
   let cur=col('.')-1
   let [wrow, wcol]=win_screenpos(0)
   let scrcol=wcol+wincol()-1
   let scrrow=wrow+winline()-1
-  let left=s:Axis(scrcol-(cur-a:mbeg), scrcol+(a:mend-1-cur), w,
-\                 g:pastel_offset_x, &columns)
-  let top=s:Axis(scrrow, scrrow, h, g:pastel_offset_y, &lines-&cmdheight)
+  let first=scrcol-(cur-a:mbeg)
+  let [left, fits]=s:Axis(first, scrcol+(a:mend-1-cur), w,
+\                         g:pastel_offset_x, &columns)
+  if fits
+    let [top, fits]=s:Axis(scrrow, scrrow, h, g:pastel_offset_y, maxline)
+  else
+    let left=max([1, min([first, &columns-w+1])])
+    let [top, fits]=s:Axis(scrrow, scrrow, h,
+\                          g:pastel_offset_y ? g:pastel_offset_y : 1, maxline)
+  endif
   return {'line': top, 'col': left, 'pos': 'topleft'}
 endfunction
 
