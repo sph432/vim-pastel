@@ -350,12 +350,146 @@ function s:ParseHex(code)
   return color+[alpha]
 endfunction
 
+"a:value, a number or a float, limited to a:low to a:high
+function s:Clamp(value, low, high)
+  return a:value < a:low ? a:low : a:value > a:high ? a:high : a:value
+endfunction
+
+"[value, unit] of a:token, a CSS number with an optional unit (%, deg, grad,
+"rad or turn), with the unit in lower case, or [0.0, 'none'] for the keyword
+"none, or [] if it is neither
+function s:CssToken(token)
+  let number='[+-]\=\%(\d\+\%(\.\d\+\)\=\|\.\d\+\)\%(e[+-]\=\d\+\)\='
+  let found=matchlist(a:token,
+\                     '\c^\('.number.'\)\(%\|deg\|grad\|rad\|turn\)\=$')
+  if !empty(found)
+    return [str2float(found[1]), tolower(found[2])]
+  endif
+  return a:token ==? 'none' ? [0.0, 'none'] : []
+endfunction
+
+"a red, green or blue channel, 0 to 255, of a CSS token, or -1 if it is no
+"channel
+function s:CssChannel(token)
+  let [value, unit]=a:token
+  if unit == '%'
+    let value=value*255/100.0
+  elseif unit != '' && unit != 'none'
+    return -1
+  endif
+  return float2nr(round(s:Clamp(value, 0.0, 255.0)))
+endfunction
+
+"a hue, 0.0 up to 360.0, of a CSS token, or -1.0 if it is no hue
+function s:CssHue(token)
+  let [value, unit]=a:token
+  if unit == 'grad'
+    let value=value*0.9
+  elseif unit == 'rad'
+    let value=value*180/(4*atan(1.0))
+  elseif unit == 'turn'
+    let value=value*360
+  elseif unit != '' && unit != 'deg' && unit != 'none'
+    return -1.0
+  endif
+  let hue=fmod(value, 360.0)
+  return hue < 0 ? hue+360 : hue
+endfunction
+
+"a saturation or lightness, 0.0 to 1.0, of a CSS token, or -1.0 if it is no
+"such thing; the plain numbers are percentages as well
+function s:CssFraction(token)
+  let [value, unit]=a:token
+  if unit != '' && unit != '%' && unit != 'none'
+    return -1.0
+  endif
+  return s:Clamp(value/100, 0.0, 1.0)
+endfunction
+
+"the color of the hue a:hue (0.0 up to 360.0), saturation a:saturation and
+"lightness a:lightness (both 0.0 to 1.0), as [red, green, blue]
+function s:HslToRgb(hue, saturation, lightness)
+  let range=a:saturation*(a:lightness < 0.5 ? a:lightness : 1-a:lightness)
+  let color=[]
+  for offset in [0, 8, 4]
+    let k=fmod(offset+a:hue/30, 12.0)
+    let ramp=k-3
+    if 9-k < ramp
+      let ramp=9-k
+    endif
+    let ramp=s:Clamp(ramp, -1.0, 1.0)
+    call add(color, float2nr(round((a:lightness-range*ramp)*255)))
+  endfor
+  return color
+endfunction
+
+"the color of a CSS rgb(), rgba(), hsl() or hsla() function, in the comma
+"notation or the space and slash one, as [red, green, blue, alpha], or [] if
+"it is not valid
+function s:ParseCss(text)
+  let found=matchlist(a:text, '\c^\(rgba\=\|hsla\=\)(\(.*\))$')
+  if empty(found)
+    return []
+  endif
+  let args=trim(found[2])
+  let alpha=''
+  if args =~ ','
+    if args =~ '/' || args =~? 'none'
+      return []
+    endif
+    let parts=map(split(args, ',', 1), 'trim(v:val)')
+    if len(parts) < 3 || len(parts) > 4
+      return []
+    endif
+    let channels=parts[:2]
+    let alpha=get(parts, 3, '')
+  else
+    let sides=split(args, '/', 1)
+    if len(sides) > 2
+      return []
+    endif
+    let channels=split(sides[0])
+    let alpha=len(sides) == 2 ? trim(sides[1]) : ''
+    if len(sides) == 2 && alpha == ''
+      return []
+    endif
+  endif
+  if len(channels) != 3
+    return []
+  endif
+  let tokens=map(copy(channels), 's:CssToken(v:val)')
+  if index(tokens, []) >= 0
+    return []
+  endif
+  let opacity=1.0
+  if alpha != ''
+    let token=s:CssToken(alpha)
+    if empty(token) || token[1] != '' && token[1] != '%' && token[1] != 'none'
+      return []
+    endif
+    let opacity=s:Clamp(token[1] == '%' ? token[0]/100 : token[0], 0.0, 1.0)
+  endif
+  if tolower(found[1])[:2] == 'rgb'
+    let color=map(copy(tokens), 's:CssChannel(v:val)')
+    return index(color, -1) >= 0 ? [] : color+[opacity]
+  endif
+  let hue=s:CssHue(tokens[0])
+  let saturation=s:CssFraction(tokens[1])
+  let lightness=s:CssFraction(tokens[2])
+  if hue < 0 || saturation < 0 || lightness < 0
+    return []
+  endif
+  return s:HslToRgb(hue, saturation, lightness)+[opacity]
+endfunction
+
 "the notations of colors: the pattern finding them in a line, and the parser
 "getting a found text's color, [red, green, blue, alpha], or [] if it is not
 "one after all
 let s:formats=[
 \ {'pattern': '\v(\w)@<!#(\x{8}|\x{6}|\x{4}|\x{3})\w@!',
 \  'parse': function('s:ParseHex')},
+\ {'pattern': '\c\v(\w)@<!(rgba?|hsla?)\([^()]*\)',
+\  'parse': function('s:ParseCss')},
 \]
 
 "[color, start, end] of the color code under the cursor, the start and end
