@@ -396,19 +396,27 @@ function s:CssHue(token)
   return hue < 0 ? hue+360 : hue
 endfunction
 
-"a saturation or lightness, 0.0 to 1.0, of a CSS token, or -1.0 if it is no
-"such thing; the plain numbers are percentages as well
-function s:CssFraction(token)
+"a saturation, lightness, whiteness, blackness or value, 0.0 to 1.0, of a CSS
+"token, or -1.0 if it is no such thing; a plain number is a percentage if
+"a:plain is 100.0, and a fraction if it is 1.0
+function s:CssFraction(token, plain)
   let [value, unit]=a:token
-  if unit != '' && unit != '%' && unit != 'none'
+  if unit == '%'
+    return s:Clamp(value/100, 0.0, 1.0)
+  elseif unit != '' && unit != 'none'
     return -1.0
   endif
-  return s:Clamp(value/100, 0.0, 1.0)
+  return s:Clamp(value/a:plain, 0.0, 1.0)
+endfunction
+
+"the 0 to 255 channels of a:fractions, [red, green, blue] from 0.0 to 1.0
+function s:Channels(fractions)
+  return map(copy(a:fractions), 'float2nr(round(v:val*255))')
 endfunction
 
 "the color of the hue a:hue (0.0 up to 360.0), saturation a:saturation and
-"lightness a:lightness (both 0.0 to 1.0), as [red, green, blue]
-function s:HslToRgb(hue, saturation, lightness)
+"lightness a:lightness (both 0.0 to 1.0), as [red, green, blue] from 0.0 to 1.0
+function s:HslToFractions(hue, saturation, lightness)
   let range=a:saturation*(a:lightness < 0.5 ? a:lightness : 1-a:lightness)
   let color=[]
   for offset in [0, 8, 4]
@@ -418,23 +426,57 @@ function s:HslToRgb(hue, saturation, lightness)
       let ramp=9-k
     endif
     let ramp=s:Clamp(ramp, -1.0, 1.0)
-    call add(color, float2nr(round((a:lightness-range*ramp)*255)))
+    call add(color, a:lightness-range*ramp)
   endfor
   return color
 endfunction
 
-"the color of a CSS rgb(), rgba(), hsl() or hsla() function, in the comma
-"notation or the space and slash one, as [red, green, blue, alpha], or [] if
-"it is not valid
+"the color of the hue a:hue (0.0 up to 360.0), whiteness a:whiteness and
+"blackness a:blackness (both 0.0 to 1.0), as [red, green, blue]; if they
+"add up to 1.0 or more, it is a gray
+function s:HwbToRgb(hue, whiteness, blackness)
+  let total=a:whiteness+a:blackness
+  if total >= 1
+    return s:Channels(repeat([a:whiteness/total], 3))
+  endif
+  let color=[]
+  for fraction in s:HslToFractions(a:hue, 1.0, 0.5)
+    call add(color, fraction*(1-total)+a:whiteness)
+  endfor
+  return s:Channels(color)
+endfunction
+
+"the color of the hue a:hue (0.0 up to 360.0), saturation a:saturation and
+"value a:value (both 0.0 to 1.0), as [red, green, blue]
+function s:HsvToRgb(hue, saturation, value)
+  let color=[]
+  for offset in [5, 3, 1]
+    let k=fmod(offset+a:hue/60, 6.0)
+    let ramp=k
+    if 4-k < ramp
+      let ramp=4-k
+    endif
+    let ramp=s:Clamp(ramp, 0.0, 1.0)
+    call add(color, a:value-a:value*a:saturation*ramp)
+  endfor
+  return s:Channels(color)
+endfunction
+
+"the color of a CSS rgb(), rgba(), hsl(), hsla(), hwb() or hwba() function, or
+"a Less hsv() or hsva() one, in the comma notation or the space and slash one,
+"as [red, green, blue, alpha], or [] if it is not valid; hwb() has no comma
+"notation, as in CSS
 function s:ParseCss(text)
-  let found=matchlist(a:text, '\c^\(rgba\=\|hsla\=\)(\(.*\))$')
+  let found=matchlist(a:text,
+\                     '\c^\(rgba\=\|hsla\=\|hwba\=\|hsva\=\)(\(.*\))$')
   if empty(found)
     return []
   endif
+  let kind=substitute(tolower(found[1]), 'a$', '', '')
   let args=trim(found[2])
   let alpha=''
   if args =~ ','
-    if args =~ '/' || args =~? 'none'
+    if kind == 'hwb' || args =~ '/' || args =~? 'none'
       return []
     endif
     let parts=map(split(args, ',', 1), 'trim(v:val)')
@@ -469,17 +511,22 @@ function s:ParseCss(text)
     endif
     let opacity=s:Clamp(token[1] == '%' ? token[0]/100 : token[0], 0.0, 1.0)
   endif
-  if tolower(found[1])[:2] == 'rgb'
+  if kind == 'rgb'
     let color=map(copy(tokens), 's:CssChannel(v:val)')
     return index(color, -1) >= 0 ? [] : color+[opacity]
   endif
   let hue=s:CssHue(tokens[0])
-  let saturation=s:CssFraction(tokens[1])
-  let lightness=s:CssFraction(tokens[2])
-  if hue < 0 || saturation < 0 || lightness < 0
+  let plain=kind == 'hsv' ? 1.0 : 100.0
+  let second=s:CssFraction(tokens[1], plain)
+  let third=s:CssFraction(tokens[2], plain)
+  if hue < 0 || second < 0 || third < 0
     return []
+  elseif kind == 'hsl'
+    return s:Channels(s:HslToFractions(hue, second, third))+[opacity]
+  elseif kind == 'hwb'
+    return s:HwbToRgb(hue, second, third)+[opacity]
   endif
-  return s:HslToRgb(hue, saturation, lightness)+[opacity]
+  return s:HsvToRgb(hue, second, third)+[opacity]
 endfunction
 
 "the notations of colors: the pattern finding them in a line, and the parser
@@ -488,7 +535,7 @@ endfunction
 let s:formats=[
 \ {'pattern': '\v(\w)@<!#(\x{8}|\x{6}|\x{4}|\x{3})\w@!',
 \  'parse': function('s:ParseHex')},
-\ {'pattern': '\c\v(\w)@<!(rgba?|hsla?)\([^()]*\)',
+\ {'pattern': '\c\v(\w)@<!(rgba?|hsla?|hwba?|hsva?)\([^()]*\)',
 \  'parse': function('s:ParseCss')},
 \]
 
