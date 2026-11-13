@@ -26,7 +26,7 @@ The plugin does nothing, without raising errors, if Vim lacks the required
 features (SEE DEPENDENCIES) or if neither a GUI nor `termguicolors` is in use.
 
 # DEPENDENCIES
-- Vim 8.1.1580 or newer, built with `+popupwin`, `+textprop` and `+eval`
+- Vim 8.1.1553 or newer, built with `+popupwin`, `+textprop` and `+eval`
 - A GUI, or a terminal with `termguicolors` enabled
 - Neovim is not supported, as it has no popup windows
 
@@ -39,6 +39,12 @@ followed by more hexadecimal digits is not treated as a color.
 In Vims that have the `WinScrolled` event (9.0 and newer), the popup follows
 the code when the window is scrolled. Older versions only update the popup on
 cursor movement, so scrolling without moving the cursor leaves it in place.
+
+## Known issues
+- In Vims older than 8.1.1580, which lack popup masks, the area of a layout
+    that no block covers (eg. right of the shorter row of `'wb|t'`) hides the
+    text under it, instead of being transparent. A single row of blocks is not
+    affected.
 
 ## Configuration
 All options are global variables, set in your `.vimrc` or at any time later
