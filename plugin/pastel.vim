@@ -110,11 +110,28 @@ let s:color='#FF00FF'
 "the colors of the pixels, by their letters above
 let s:hex={}
 
+"a:color, a #rrggbb or #rrggbbaa code, shown over a:background, a #rrggbb
+"color, as a #rrggbb color; the alpha is ignored if the background is not
+"a #rrggbb color
+function s:Blend(color, background)
+  if len(a:color) != 9 || a:background !~? '^#\x\{6}$'
+    return a:color[:6]
+  endif
+  let alpha=str2nr(a:color[7:8], 16)/255.0
+  let blended='#'
+  for i in [1, 3, 5]
+    let over=str2nr(a:color[i:i+1], 16)
+    let under=str2nr(a:background[i:i+1], 16)
+    let blended.=printf('%02X', float2nr(round(alpha*over+(1-alpha)*under)))
+  endfor
+  return blended
+endfunction
+
 function s:UpdateHex()
   let s:hex={'k': g:pastel_black_bg, 'w': g:pastel_white_bg,
 \            'd': g:pastel_trans_bg, 'l': g:pastel_trans_fg, 'n': 'NONE'}
   for background in ['k', 'w', 'd', 'l']
-    let s:hex[s:over[background]]=s:color
+    let s:hex[s:over[background]]=s:Blend(s:color, s:hex[background])
   endfor
 endfunction
 
@@ -151,7 +168,7 @@ function s:SetupPopupHilightStyles()
   endfor
 endfunction
 
-"make a:color, a #rrggbb code, the color shown
+"make a:color, a #rrggbb or #rrggbbaa code, the color shown
 function s:SetColor(color)
   if a:color ==# s:color
     return
@@ -274,13 +291,13 @@ function s:SetPopupContent(popup)
   endif
 endfunction
 
-"[code, start, end] of the #rrggbb code under the cursor, or []
+"[code, start, end] of the #rrggbb or #rrggbbaa code under the cursor, or []
 function s:ColorAtCursor()
   let line=getline('.')
   let col=col('.')-1
   let start=0
   while 1
-    let [color, mbeg, mend]=matchstrpos(line, '\v#\x{6}\x@!', start)
+    let [color, mbeg, mend]=matchstrpos(line, '\v#(\x{8}|\x{6})\x@!', start)
     if mbeg < 0
       return []
     endif
