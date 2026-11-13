@@ -1,5 +1,5 @@
-# 0.1 - first usable release (planned)
-## 0.1.0 (planned)
+# 0.1 - first usable release
+## 0.1.0
 #### Added
 - Popup previewing the color under the cursor when it is a `#RRGGBB` code,
     shown on a black background
