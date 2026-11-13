@@ -43,6 +43,14 @@ let g:pastel_detail_mode=get(g:, 'pastel_detail_mode', 'x')
 let g:pastel_color_size=get(g:, 'pastel_color_size', 6)
 let g:pastel_bg_size=get(g:, 'pastel_bg_size', 2)
 
+"popup placement relative to the color code, in characters; positive means
+"right/below, negative left/above, 0 centered; if the popup would not fit
+"on the screen, the offset is inverted
+"  x: 2 puts the popup's left edge 2 columns after the code's last column
+"  y: 0 centers the popup on the cursor line
+let g:pastel_offset_x=get(g:, 'pastel_offset_x', 2)
+let g:pastel_offset_y=get(g:, 'pastel_offset_y', 0)
+
 "these are better left alone but you may want to change trans colors
 let g:pastel_white_bg=get(g:, 'pastel_white_bg', '#FFFFFF')
 let g:pastel_trans_fg=get(g:, 'pastel_trans_fg', '#BFBFBF') "75% gray
@@ -113,7 +121,29 @@ function s:ColorAtCursor()
   endwhile
 endfunction
 
-"popup position next to the code at byte range [mbeg, mend), kept on screen
+"start of a popup of a:size on one axis, placed relative to the anchor
+"positions [a:first, a:last] by offset a:off (SEE g:pastel_offset_x/y);
+"the offset is inverted if the popup would not fit in 1..a:limit
+function s:Axis(first, last, size, off, limit)
+  let starts=[]
+  for off in [a:off, -a:off]
+    if off > 0
+      call add(starts, a:last+off)
+    elseif off < 0
+      call add(starts, a:first+off-a:size+1)
+    else
+      call add(starts, a:first+(a:last-a:first+1)/2-a:size/2)
+    endif
+  endfor
+  for start in starts
+    if start >= 1 && start+a:size-1 <= a:limit
+      return start
+    endif
+  endfor
+  return max([1, min([starts[0], a:limit-a:size+1])])
+endfunction
+
+"popup position for the code at byte range [mbeg, mend)
 function s:Position(mbeg, mend)
   let h=g:pastel_bg_size+g:pastel_color_size/2
   let w=2*g:pastel_bg_size+g:pastel_color_size
@@ -121,14 +151,9 @@ function s:Position(mbeg, mend)
   let [wrow, wcol]=win_screenpos(0)
   let scrcol=wcol+wincol()-1
   let scrrow=wrow+winline()-1
-  let first=scrcol-(cur-a:mbeg)
-  let last=scrcol+(a:mend-1-cur)
-  let left=last+2
-  if left+w-1 > &columns
-    let left=max([1, first-w-1])
-  endif
-  let top=scrrow-h/2
-  let top=max([1, min([top, &lines-&cmdheight-h+1])])
+  let left=s:Axis(scrcol-(cur-a:mbeg), scrcol+(a:mend-1-cur), w,
+\                 g:pastel_offset_x, &columns)
+  let top=s:Axis(scrrow, scrrow, h, g:pastel_offset_y, &lines-&cmdheight)
   return {'line': top, 'col': left, 'pos': 'topleft'}
 endfunction
 
