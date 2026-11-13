@@ -18,16 +18,16 @@ let s:warned=0
 "a definition of color blocks to show, from left to right
 "  combination of the following as a string:
 "  w - color on white background
-"  b - color on black background
+"  k - color on black background
 "  t - color on checkered "transparent" background
-"  2 - b and w alternating
-"  3 - b, t and w alternating (in that order)
+"  2 - k and w alternating
+"  3 - k, t and w alternating (in that order)
 "  | - put the blocks following it in a new row
 "
 "blocks are of the same size (see below), each with its own margin
 " sharkdp/pastel's look would be "t",
-" other suggested combinations are "2t", "t|bw" and "3"
-let g:pastel_color_mode=get(g:, 'pastel_color_mode', 'b')
+" other suggested combinations are "2t", "t|kw" and "3"
+let g:pastel_color_mode=get(g:, 'pastel_color_mode', 'k')
 
 "alternate between backgrounds every n seconds in "2" and "3" blocks, 0.1 or
 "more; less than that turns alternating off, showing the first background
@@ -60,13 +60,16 @@ let g:pastel_trans_bg=get(g:, 'pastel_trans_bg', '#404040') "25% gray
 let g:pastel_black_bg=get(g:, 'pastel_black_bg', '#000000')
 
 "the blocks of a g:pastel_color_mode value: a list of rows, each a list of w,
-"b, t, 2 or 3; empty (and a warning is shown) if the value is not supported
+"k, t, 2 or 3; empty (and a warning is shown) if the value is not supported
 function s:ParseLayout(mode)
-  if string(a:mode) !~# '^''[wbt23]\+\(|[wbt23]\+\)*''$'
+  if string(a:mode) !~# '^''[wkt23]\+\(|[wkt23]\+\)*''$'
     echohl WarningMsg
     echom 'pastel: unsupported g:pastel_color_mode '.string(a:mode)
-\         .', only w, b, t, 2, 3 and | (not leading, trailing or doubled)'
+\         .', only w, k, t, 2, 3 and | (not leading, trailing or doubled)'
 \         .' are supported'
+    if string(a:mode) =~# 'b'
+      echom 'pastel: the black block was renamed from b to k'
+    endif
     echohl None
     return []
   endif
@@ -159,12 +162,12 @@ endfunction
 "how many timer ticks the alternating blocks have advanced
 let s:phase=0
 
-"the background, w, b or t, of a block of g:pastel_color_mode
+"the background, w, k or t, of a block of g:pastel_color_mode
 function s:Background(block)
   if a:block == '2'
-    return ['b', 'w'][s:phase % 2]
+    return ['k', 'w'][s:phase % 2]
   elseif a:block == '3'
-    return ['b', 't', 'w'][s:phase % 3]
+    return ['k', 't', 'w'][s:phase % 3]
   endif
   return a:block
 endfunction
