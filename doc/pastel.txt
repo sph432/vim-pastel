@@ -152,6 +152,10 @@ g:pastel_trans_bg  (default "#404040")                     *g:pastel_trans_bg*
 ==============================================================================
 5. KNOWN ISSUES                                                *pastel-issues*
 
+    - There is only one popup, shared by all windows and buffers, so its
+      layout and colors (g:pastel_color_mode and the color options) are the
+      same everywhere; and a popup is only shown for the cursor of the current
+      window.
     - In Vims older than 8.2.0325, which lack the |SafeState| event, closing
       or opening a fold without moving the cursor leaves the popup as it was
       until the cursor moves.

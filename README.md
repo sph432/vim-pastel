@@ -78,6 +78,10 @@ No color is previewed for a code in a closed fold, as it is not displayed
 there.
 
 ## Known issues
+- There is only one popup, shared by all windows and buffers, so its layout
+    and colors (`g:pastel_color_mode` and the color options) are the same
+    everywhere; and a popup is only shown for the cursor of the current
+    window.
 - In Vim versions before 8.2.4713, lacking the `WinScrolled` event, the popup
     is only updated on cursor movement; scrolling the window without moving
     the cursor leaves the popup at its old position on the screen.
