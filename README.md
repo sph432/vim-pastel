@@ -13,26 +13,25 @@ The popup is also hidden in insert mode and when leaving the buffer, and
 shown again on leaving insert mode.
 
 # INSTALL
-With [vim-plug](https://github.com/junegunn/vim-plug), add this to your
+With [vim-plug](https://github.com/junegunn/vim-plug) (or your favourite plugin
+manager), add the plugin to your
 `.vimrc` and run `:PlugInstall`:
 ```vim
 Plug 'https://tools.sphnet.in/git/sph/vim-pastel'
 ```
 
-Any other plugin manager, or Vim's native package directory
-(`~/.vim/pack/*/start/`), works as well.
+Vim's native package directory (`~/.vim/pack/*/start/`) will work as well.
 
 The plugin does nothing, without raising errors, if Vim lacks the required
 features (SEE DEPENDENCIES) or if neither a GUI nor `termguicolors` is in use.
 
 The documentation is also available inside Vim as `:help pastel`. Plugin
-managers generate its tags; with a native package directory, run
-`:helptags ALL` once.
+managers generate its tags; with a native package directory, run `:helptags ALL` once.
 
 # DEPENDENCIES
 - Vim 8.1.1553 or newer, built with `+popupwin`, `+textprop` and `+eval`
-- A GUI, or a terminal with `termguicolors` enabled
-- Neovim is not supported, as it has no popup windows
+- A terminal with `termguicolors` enabled (or a GUI)
+- Note that Neovim, lacking +popupwin, is not planned to be supported any time soon
 
 # DETAILS
 ## Detected colors
@@ -78,22 +77,16 @@ machine-generated files: it takes seconds on a line of millions of characters.
 No color is previewed for a code in a closed fold, as it is not displayed
 there.
 
-## Scrolling
-In Vims that have the `WinScrolled` event (8.2.4713 and newer), the popup
-follows the code when the window is scrolled. SEE Known issues for older
-versions.
-
 ## Known issues
-- In Vims older than 8.2.4713, which lack the `WinScrolled` event, the popup
+- In Vim versions before 8.2.4713, lacking the `WinScrolled` event, the popup
     is only updated on cursor movement; scrolling the window without moving
     the cursor leaves the popup at its old position on the screen.
-- In Vims older than 8.2.0325, which lack the `SafeState` event, closing or
+- In Vim verions before 8.2.0325, without the `SafeState` event, closing or
     opening a fold without moving the cursor leaves the popup as it was until
     the cursor moves.
-- In Vims older than 8.1.1580, which lack popup masks, the area of a layout
+- In Vim versions before 8.1.1580, which lack popup masks, the area of a layout
     that no block covers (eg. right of the shorter row of `'wk|t'`) hides the
-    text under it, instead of being transparent. A single row of blocks is not
-    affected.
+    text under it, instead of being transparent.
 
 ## Configuration
 All options are global variables, set in your `.vimrc` or at any time later
@@ -105,70 +98,66 @@ A value that is not valid for its option (eg. a float or a list for a size, or
 shown, once per value, and the default is used instead. Numbers may also be
 given as strings, eg. `'6'`.
 
-- `g:pastel_color_mode` (`'k'`) - the previews to show and their layout, a
+- `g:pastel_color_mode` (`'t'`) - the previews to show and their layout, a
     string of block letters, left to right:
   - `k`: the color on black
   - `w`: the color on white
-  - `t`: the color on a checkered "transparent" background, as in
-        sharkdp/pastel
+  - `t`: the color on a checkered "transparent" background
   - `2`: the color on black and white, alternating
   - `3`: the color on black, checkered and white, alternating, in that order
   - `|`: the blocks after it go in a new row below
 
   For example, `'t'` is a single block, `'kw'` shows black and white side by
   side, and `'t|kw'` shows a checkered block with black and white below it.
-  Each block has its own margin, and all blocks are the same size. The area
-  not covered by a block, eg. right of a shorter row, is transparent: the text
-  under it stays visible. Blocks may split a line between them: with odd
-  sizes, the line where two rows meet shows the bottom of the upper block over
-  the top of the lower one. A half line that has a block on one side and
-  nothing on the other has the default color on the empty side.
+  Each block has its own margin, and all blocks are the same size.
+  The area not covered by a block, eg. right of a shorter row, is transparent:
+  the text under it stays visible.
 
   Any other value (including a leading, trailing or doubled `|`) prints a
   warning. At startup the plugin does not load; when set later, the previous
   layout stays.
-- `g:pastel_color_timer` (`5`) - seconds between the backgrounds of `2` and `3`
+- `g:pastel_color_timer` (5) - seconds between the backgrounds of `2` and `3`
     blocks changing, `0.1` or more, fractions allowed; less than that turns
     alternating off, showing the first background. The timer only runs while
     the popup is shown.
-- `g:pastel_color_size` (`6`) - size of the color block, vertically in
+- `g:pastel_color_size` (6) - size of the color block, vertically in
     half-characters and horizontally in characters, from 1 to 1000
-- `g:pastel_bg_size` (`2`) - size of the margin around the color block, in the
+- `g:pastel_bg_size` (2) - size of the margin around the color block, in the
     same units, from 0 to 1000
-- `g:pastel_alpha_position` (`'auto'`) - where the alpha is in 8-digit
+- `g:pastel_alpha_position` ('auto') - where the alpha is in 8-digit
     hexadecimal codes:
   - `'last'`: `#RRGGBBAA`, as in CSS
   - `'first'`: `#AARRGGBB`, as in Android
   - `'auto'`: `'first'` in the filetypes of `g:pastel_alpha_first_filetypes`,
         `'last'` in the others, and a short note (`pastel: assuming ...`) the
         first time an 8-digit code is found in a buffer, as it is a guess
-
-  The variable `b:pastel_alpha_position`, if set, takes precedence in its
-  buffer; eg. `autocmd FileType cs let b:pastel_alpha_position='first'`. The
-  4-digit form is not affected, as it is always `#RGBA`.
-- `g:pastel_alpha_first_filetypes` (`['java', 'kotlin']`) - the filetypes
-    where `'auto'` means `'first'`
+  - the buffer-local variant `b:pastel_alpha_position`, if set, takes precedence
+        in its buffer; eg. to force MSB-alpha in your Android project, you could use 
+        `autocmd BufRead /path/to/my/android/project/*.xml let b:pastel_alpha_position='first'`
+  - Note that the 4-digit form is not affected, it is always parsed as `#RGBA`.
+- `g:pastel_alpha_first_filetypes` (`['java', 'kotlin']`) - the filetypes where
+    `'auto'` should mean `'first'`. XML is omitted as it is indeterminate.
 - `g:pastel_ignore_filetypes` (`['gitcommit', '*sql*']`) - the filetypes where
     no colors are looked for, as a list of glob patterns (`*`, `?`, `[abc]`,
     `{a,b}`), each matched against the whole filetype or any part of a
-    compound one: here `gitcommit`, where `#123` is an issue and not a `#RGB`
-    color, and `sql` and its variants (`mysql`, `plsql`, ...), for their very
-    long lines
-- `g:pastel_offset_x` (`2`) - horizontal placement of the popup relative to the
+    compound one; default values are:
+   - `gitcommit`, where `#123` is more likely an issue id rather than a `#RGB` color
+   - `sql` and its variants (`mysql`, `plsql`, ...), for their very long lines
+- `g:pastel_offset_x` (2) - horizontal placement of the popup relative to the
     color code, in characters:
   - positive: right of the code, its left edge that many columns after the
         code's last column
   - negative: left of the code, its right edge that many columns before the
         code's first column
   - `0`: centered on the code
-- `g:pastel_offset_y` (`0`) - vertical placement relative to the cursor line:
+- `g:pastel_offset_y` (0) - vertical placement relative to the cursor line:
   - positive: below, its top edge that many rows below the line
   - negative: above, its bottom edge that many rows above the line
   - `0`: centered on the line
-- `g:pastel_black_bg` (`'#000000'`) - background color of the black preview
-- `g:pastel_white_bg` (`'#FFFFFF'`) - background color of the white preview
-- `g:pastel_trans_fg` (`'#BFBFBF'`) and `g:pastel_trans_bg` (`'#404040'`) -
-    the two colors of the checkered "transparent" background
+- `g:pastel_black_bg` ('#000000') - background color of the black preview
+- `g:pastel_white_bg` ('#FFFFFF') - background color of the white preview
+- `g:pastel_trans_fg` ('#BFBFBF') and
+- `g:pastel_trans_bg` ('#404040') - the two background colors of the checkered "transparent" preview
 
 The colors are `#RRGGBB` ones or color names Vim knows, eg. `'red'` or
 `'NONE'`.
@@ -206,6 +195,12 @@ high. A character cell holds two pixels: a space if they have the same color,
 or an upper half block with the upper pixel as its foreground and the lower
 one as its background if they differ. The content is built from text
 properties.
+The border always adds up to an even number, but if the color size is odd,
+the preview ends up with an odd height:
+A pair of vertically consecutive previews will share a line between them - 
+the line where two rows meet shows the bottom of the upper block over the top
+of the lower one. A vertically single preview will have, in its last line the
+default color on bottom.
 
 ## Tests
 The tests are run from the repository's directory, or any other, with:
