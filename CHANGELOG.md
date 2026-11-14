@@ -101,7 +101,7 @@
     and `/` notations, with numbers, percentages, angle units and `none`
 
 # 0.7 - robustness
-## 0.7.0 (planned)
+## 0.7.0
 #### Added
 - `hwb()` and `hwba()` (in the space and slash notation, as in CSS), and the
     Less `hsv()` and `hsva()`
