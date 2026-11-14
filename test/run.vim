@@ -335,7 +335,8 @@ call s:Check('pixels: alpha on white', s:Pixels('#ff000080'),
 \            s:Grid(10, 10, {x, y -> s:Block(x, y, '#ffffff', '#ff7f7f')}))
 let g:pastel_color_mode='t'
 call s:Check('pixels: alpha on checkers', s:Pixels('#ff000080'),
-\            s:Grid(10, 10, {x, y -> s:Block(x, y, (x+y) % 2 ? '#404040' : '#bfbfbf', (x+y) % 2 ? '#a02020' : '#df5f5f')}))
+\            s:Grid(10, 10, {x, y -> s:Block(x, y, (x+y) % 2 ? '#404040' : '#bfbfbf',
+\                                           (x+y) % 2 ? '#a02020' : '#df5f5f')}))
 
 "two rows, the second shorter: the empty part has no color
 let g:pastel_color_mode='kw|t'
@@ -504,7 +505,8 @@ let g:pastel_color_mode='k'
 let g:pastel_alpha_position='last'
 call s:Check('bad b:pastel_alpha_position, global last', s:At('#ff000080', 2, '', 'nonsense'), [[255, 0, 0, 502], 0, 9])
 let g:pastel_alpha_position='first'
-call s:Check('bad b:pastel_alpha_position, global first', s:At('#80ff0000', 2, '', 'nonsense'), [[255, 0, 0, 502], 0, 9])
+call s:Check('bad b:pastel_alpha_position, global first',
+\            s:At('#80ff0000', 2, '', 'nonsense'), [[255, 0, 0, 502], 0, 9])
 let g:pastel_alpha_position='nonsense'
 call s:Check('bad g:pastel_alpha_position: auto', s:At('#ff000080', 2, 'css'), [[255, 0, 0, 502], 0, 9])
 let g:pastel_alpha_position='auto'
@@ -524,7 +526,8 @@ let s:shown=s:Shown(s:text)
 let s:popup=popup_list()[0]
 call s:Check('huge popup: raises nothing', s:shown[0], '')
 call s:Check('huge popup: lines limited to the screen', line('$', s:popup) <= &lines, 1)
-call s:Check('huge popup: width limited to the screen', max(map(getbufline(winbufnr(s:popup), 1, '$'), 'strchars(v:val)')) <= &columns, 1)
+let s:widths=map(getbufline(winbufnr(s:popup), 1, '$'), 'strchars(v:val)')
+call s:Check('huge popup: width limited to the screen', max(s:widths) <= &columns, 1)
 let g:pastel_color_size=6
 let g:pastel_bg_size=2
 let g:pastel_color_mode='k'
