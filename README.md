@@ -110,20 +110,46 @@ each region. A region with none shows its number and the color: `Region 2`, and
 | `%x` `%X` | `#rrggbb` and, if the alpha is not 1, `aa`; lower, upper case |
 | `%t` | the color code as written in the buffer |
 | `%{id}` | the number of the region |
+| `%{rgb}` `%{hsl}` `%{hwb}` `%{hsv}` `%{cmyk}` | the color as a whole |
+| `%{hsl.s}` | one value of it, eg. the saturation |
+| `%#Group#` `%*` | highlight the text after it with `Group`, until `%*` |
+| `%(` `%)` | text that is left out if an item in it is empty |
 | `%n` | a line break |
 | `%N` | where a line may be broken if too long; a space never is |
 | `%%` | a `%` |
 
-For instance `rgb(%r %g %b)`, or `'%x%n%r:p %g:p %b:p%nin the buffer: %t'`.
+For instance `rgb(%r %g %b)`, or `'%x%n%{hsl}%nin the buffer: %t'`.
+
 Numbers take modifiers after a colon, which can be combined: `p` is a percent
 (`%r:p` is `50%`), `P` is that without the `%`, `f` a fraction (`0.5`), `x` and
 `X` two hex digits, and `.N` is the number of decimals of the percent or the
-fraction (`%r:p:.1` is `49.8%`); `o` leaves out an alpha of 1, and `a` makes
-`%x` always have it. A colon and a letter after an item are always a modifier;
-to have them as text, put the item in braces, `%{r}:x`.
+fraction (`%r:p:.1` is `49.8%`); `o` leaves out an alpha of 1, `a` makes `%x`
+and the models always have it. A colon and a letter after an item are always a
+modifier; to have them as text, put the item in braces, `%{r}:x`.
 
-Everything not listed is reserved, as are `%#`, `%*`, `%(`, `%)` and the names
-of the color spaces (`%{hsl}`, `%{lab.l}` and so on), to be used later. An
+The models are shown in the CSS notation, `hsl(32 100% 50%)`, with ` / 0.8`
+after the values if the alpha is not 1, or with commas if asked for with `c`,
+`hsla(32, 100%, 50%, 0.8)`. The values of the models are `r`, `g`, `b` of `rgb`,
+`h`, `s`, `l` of `hsl`, `h`, `s`, `v` of `hsv`, `h`, `w`, `b` of `hwb` and `c`,
+`m`, `y`, `k` of `cmyk`, so `%{hsl.s}` and `%{hsv.s}` are not the same number;
+the hue is in degrees, the others percents (`p`, `P` and `f` change that), and
+the red, green and blue are as `%r`. Models are rounded to whole degrees and
+percents unless `.N` says otherwise, `%{hsl:.3}`; as every notation but `cmyk`,
+which has none in CSS and is not recognized as a color, is read by the plugin
+too, with enough decimals it is the same color. `hwb` has no comma notation.
+
+For `%#Group#` any highlight group can be used, one that does not exist is
+warned about once. These are defined as the color changes, if a format uses
+them: `PastelRed`, `PastelGreen` and `PastelBlue` have the color's red, green
+or blue alone as their background, `PastelCyan`, `PastelMagenta` and
+`PastelYellow` their inverses (255 minus it, in cyan, magenta or yellow), and
+`PastelAlpha` is a gray the lighter the less transparent the color is; the text
+is black or white, whichever is easier to read on it. Text without a
+highlight uses `PastelDetail`, which is linked to `Normal`, and can be changed.
+For instance `'%#PastelRed#%r%*  %#PastelGreen#%g%*  %#PastelBlue#%b'`.
+
+Everything not listed is reserved, as are the names of the other color spaces
+and notations (`%{lab.l}`, `%{hsla}`, `%{hex}` and so on), to be used later. An
 item that is not valid, or is not supported yet, is not text: a warning says so
 and the default format is used.
 
