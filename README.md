@@ -85,7 +85,7 @@ there.
 - In Vim versions before 8.2.4713, lacking the `WinScrolled` event, the popup
     is only updated on cursor movement; scrolling the window without moving
     the cursor leaves the popup at its old position on the screen.
-- In Vim verions before 8.2.0325, without the `SafeState` event, closing or
+- In Vim versions before 8.2.0325, without the `SafeState` event, closing or
     opening a fold without moving the cursor leaves the popup as it was until
     the cursor moves.
 - In Vim versions before 8.1.1580, which lack popup masks, the area of a layout
