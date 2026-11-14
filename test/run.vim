@@ -396,7 +396,7 @@ endfor
 
 "the number of warnings about options shown so far
 function s:Warnings()
-  return len(filter(split(execute('messages'), "\n"), 'v:val =~# "^pastel: [gb]:.* is not "'))
+  return len(filter(split(execute('messages'), "\n"), 'v:val =~# "^pastel: [gb]:pastel_"'))
 endfunction
 
 "move the cursor onto the first color of a css buffer holding a:text, with the
@@ -733,6 +733,170 @@ for s:letter in split('rgbaxXtnN', '\zs')
   endif
 endfor
 call s:Check('template: the letters in use are valid', s:letters, [])
+
+"layouts: the rows, and the regions as [first row, first column, last row,
+"last column]; empty if the layout is not valid
+let s:ParseLayout=s:Fn('ParseLayout')
+function s:Layout(mode)
+  silent! messages clear
+  let layout=s:ParseLayout(a:mode)
+  if empty(layout)
+    return []
+  endif
+  return [layout.rows, map(copy(layout.regions), '[v:val.r0, v:val.c0, v:val.r1, v:val.c1]'), layout.alternating]
+endfunction
+call s:Check('layout: single', s:Layout('k'), [[['k']], [], 0])
+call s:Check('layout: rows', s:Layout('kw|t'), [[['k', 'w'], ['t']], [], 0])
+call s:Check('layout: alternating', s:Layout('k2|3'), [[['k', '2'], ['3']], [], 1])
+call s:Check('layout: only a detail', s:Layout('d'), [[['d']], [[0, 0, 0, 0]], 0])
+call s:Check('layout: details in a row are one', s:Layout('dd'), [[['d', 'd']], [[0, 0, 0, 1]], 0])
+call s:Check('layout: details in a column are one', s:Layout('d|d'), [[['d'], ['d']], [[0, 0, 1, 0]], 0])
+call s:Check('layout: a square of details', s:Layout('dd|dd'), [[['d', 'd'], ['d', 'd']], [[0, 0, 1, 1]], 0])
+call s:Check('layout: a detail next to a block', s:Layout('kd'), [[['k', 'd']], [[0, 1, 0, 1]], 0])
+call s:Check('layout: a . splits details', s:Layout('d.d'), [[['d', 'd']], [[0, 0, 0, 0], [0, 1, 0, 1]], 0])
+call s:Check('layout: a . takes no room', s:Layout('k.w'), [[['k', 'w']], [], 0])
+call s:Check('layout: several . are one', s:Layout('d...d'), [[['d', 'd']], [[0, 0, 0, 0], [0, 1, 0, 1]], 0])
+call s:Check('layout: a . at the ends', s:Layout('.d.'), [[['d']], [[0, 0, 0, 0]], 0])
+call s:Check('layout: a row of . splits details', s:Layout('d|.|d'), [[['d'], ['d']], [[0, 0, 0, 0], [1, 0, 1, 0]], 0])
+call s:Check('layout: a row of . takes no room', s:Layout('k|.|w'), [[['k'], ['w']], [], 0])
+call s:Check('layout: two rows of .', s:Layout('d|.|.|d'), [[['d'], ['d']], [[0, 0, 0, 0], [1, 0, 1, 0]], 0])
+call s:Check('layout: td|d.d', s:Layout('td|d.d'), [[['t', 'd'], ['d', 'd']], [[0, 1, 1, 1], [1, 0, 1, 0]], 0])
+call s:Check('layout: td|.|dd', s:Layout('td|.|dd'), [[['t', 'd'], ['d', 'd']], [[0, 1, 0, 1], [1, 0, 1, 1]], 0])
+call s:Check('layout: td|d', s:Layout('td|d'), [[['t', 'd'], ['d']], [[0, 1, 0, 1], [1, 0, 1, 0]], 0])
+call s:Check('layout: regions in reading order', s:Layout('kd|dk|kd')[1], [[0, 1, 0, 1], [1, 0, 1, 0], [2, 1, 2, 1]])
+call s:Check('layout: an L is not valid', s:Layout('td|dd'), [])
+call s:Check('layout: an L the other way is not valid', s:Layout('dd|dt'), [])
+call s:Check('layout: a T is not valid', s:Layout('ddd|kdk'), [])
+call s:Check('layout: first row of .', s:Layout('.|d'), [])
+call s:Check('layout: last row of .', s:Layout('d|.'), [])
+call s:Check('layout: only .', s:Layout('.'), [])
+call s:Check('layout: doubled bar', s:Layout('k||w'), [])
+call s:Check('layout: trailing bar', s:Layout('k|'), [])
+call s:Check('layout: leading bar', s:Layout('|k'), [])
+call s:Check('layout: renamed block', s:Layout('b'), [])
+call s:Check('layout: unknown block', s:Layout('x'), [])
+call s:Check('layout: not a string', s:Layout(5), [])
+call s:Check('layout: empty', s:Layout(''), [])
+call s:Check('layout: no color for ragged rows', len(s:Layout('kwt|d')[1]), 1)
+
+"what is drawn: the lines of the popup for a code, with ' ' as . and a half block
+"as H, for a layout and a detail format
+function s:Rendered(mode, format, code)
+  let g:pastel_color_mode=a:mode
+  let g:pastel_detail_format=a:format
+  enew!
+  let &filetype='css'
+  call setline(1, a:code)
+  call cursor(1, 1)
+  call s:Fn('OnCursorMove')()
+  let popup=popup_list()[0]
+  let lines=getbufline(winbufnr(popup), 1, '$')
+  return map(lines, 'substitute(substitute(v:val, "▀", "H", "g"), " ", ".", "g")')
+endfunction
+let s:blank10=repeat('.', 10)
+call s:Check('detail: alone', s:Rendered('d', '%x', '#ff8800'), ['#ff8800...', s:blank10, s:blank10, s:blank10, s:blank10])
+call s:Check('detail: the default format', s:Rendered('d', '%x', '#ff8800')[0], '#ff8800...')
+call s:Check('detail: popup size', [popup_getpos(popup_list()[0]).width, popup_getpos(popup_list()[0]).height], [10, 5])
+call s:Check('detail: rgb grows to the right', s:Rendered('d', 'rgb(%r %g %b)', '#ff8800'),
+\            ['rgb(255.136.0)'] + repeat([repeat('.', 14)], 4))
+call s:Check('detail: alpha', s:Rendered('d', '%x', '#ff8800cc')[0], '#ff8800cc.')
+call s:Check('detail: broken where permitted', s:Rendered('d', 'rgb(%N%r %N%g %N%b)', '#ff8800'),
+\            ['rgb(255...', '136.0)....', s:blank10, s:blank10, s:blank10])
+call s:Check('detail: lines', s:Rendered('d', '%x%n%r:p %g:p %b:p%nsrc %t', 'rgb(255 136 0)'),
+\            ['#ff8800...........', '100%.53%.0%.......', 'src.rgb(255.136.0)', repeat('.', 18), repeat('.', 18)])
+call s:Check('detail: under a block', s:Rendered('t|d', '%x', '#ff8800'),
+\            ['HHHHHHHHHH', 'HH......HH', 'HH......HH', 'HH......HH', 'HHHHHHHHHH', '#ff8800...'] + repeat([s:blank10], 4))
+call s:Check('detail: next to a block', s:Rendered('td', '%x', '#ff8800cc')[0], 'HHHHHHHHHH#ff8800cc.')
+call s:Check('detail: two regions, the second is named', s:Rendered('td|d', '%x', '#ff8800')[5:6], ['Region.2............', '#ff8800.............'])
+call s:Check('detail: two regions, a list', s:Rendered('td|d.d', ['A%n%x', 'B', 'C'], '#ff8800')[0:1], ['HHHHHHHHHHA.........', 'HH......HH#ff8800...'])
+call s:Check('detail: two regions, the second of a list', s:Rendered('td|d.d', ['A%n%x', 'B', 'C'], '#ff8800')[5], 'B...................')
+call s:Check('detail: separated regions', s:Rendered('td|.|dd', ['one', 'two'], '#ff8800')[0] . '/' . s:Rendered('td|.|dd', ['one', 'two'], '#ff8800')[5], 'HHHHHHHHHHone......./two.................')
+call s:Check('detail: a short list names the rest', s:Rendered('d.d.d', ['x'], '#ff8800')[0], 'x.........Region.2..Region.3..')
+call s:Check('detail: a list of nothing names all', s:Rendered('d', [], '#ff8800')[0], 'Region.1..')
+call s:Check('detail: a long list is not a problem', s:Rendered('d', ['a', 'b'], '#ff8800')[0], 'a.........')
+
+"growth: to the right before down, only into what is free, else cut
+call s:Check('growth: both want the cell, the right one has it', s:Rendered('td|d', ['1%n2%n3%n4%n5%n6%n7%n8', 'wide-wide-wide-wide-wide'], '#ff8800')[0:5],
+\            ['HHHHHHHHHH1.............', 'HH......HH2.............', 'HH......HH3.............', 'HH......HH4.............', 'HHHHHHHHHH5…............', 'wide-wide-wide-wide-wide'])
+let s:tall='1%n2%n3%n4%n5%n6%n7%n8'
+call s:Check('growth: free down in a ragged layout', s:Rendered('td|k', [s:tall], '#ff8800')[0:7],
+\            ['HHHHHHHHHH1.........', 'HH......HH2.........', 'HH......HH3.........', 'HH......HH4.........',
+\             'HHHHHHHHHH5.........', '..........6.........', '..........7.........', '..........8.........'])
+call s:Check('growth: a row of . stops it', s:Rendered('td|.|k', [s:tall], '#ff8800')[4], 'HHHHHHHHHH5…........')
+call s:Check('growth: a row of . stops it, the size', popup_getpos(popup_list()[0]).height, 10)
+call s:Check('growth: a . stops it to the right', s:Rendered('d.', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghi…')
+call s:Check('growth: without the . it does not', s:Rendered('d', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghijklmnopqrstuvwxyz')
+call s:Check('growth: a . elsewhere does not', s:Rendered('.d', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghijklmnopqrstuvwxyz')
+call s:Check('growth: the claim of the one above is cancelled', s:Rendered('td|.|d', [s:tall, 'wide-wide-wide-wide-wide'], '#ff8800')[4:5],
+\            ['HHHHHHHHHH5…............', 'wide-wide-wide-wide-wide'])
+call s:Check('growth: blocked to the right, cut', s:Rendered('dk', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghi…..........')
+call s:Check('growth: free to the right', s:Rendered('kd', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], '..........abcdefghijklmnopqrstuvwxyz')
+call s:Check('growth: blocked down, cut', s:Rendered('d|k', '1%n2%n3%n4%n5%n6%n7%n8', '#ff8800')[0:5], ['1.........', '2.........', '3.........', '4.........', '5…........', s:blank10])
+call s:Check('growth: free down', s:Rendered('k|d', '1%n2%n3%n4%n5%n6%n7%n8', '#ff8800')[5:12], ['1.........', '2.........', '3.........', '4.........', '5.........', '6.........', '7.........', '8.........'])
+call s:Check('growth: free down, the size', [popup_getpos(popup_list()[0]).width, popup_getpos(popup_list()[0]).height], [10, 13])
+call s:Check('growth: breaking instead', s:Rendered('kd|dk', ['a%Nb%Nc', 'x%Ny%Nz'], '#ff8800')[0] . s:Rendered('kd|dk', ['a%Nb%Nc', 'x%Ny%Nz'], '#ff8800')[5], '..........abc.......xyz.................')
+call s:Check('growth: wider than the layout', popup_getpos(popup_list()[0]).width, 20)
+
+"odd sizes: a region has the lines that are whole in it, and at the bottom also
+"the one the padding of the odd height completes
+let g:pastel_color_size=3
+let g:pastel_bg_size=1
+call s:Check('odd: popup size', [s:Rendered('d', 'a%nb%nc', '#ff8800')[0], popup_getpos(popup_list()[0]).width, popup_getpos(popup_list()[0]).height], ['a....', 5, 3])
+call s:Check('odd: the lines at the bottom', s:Rendered('d', 'a%nb%nc', '#ff8800'), ['a....', 'b....', 'c....'])
+call s:Check('odd: the shared line is not for the text', s:Rendered('d|k', 'a%nb%nc', '#ff8800')[0:2], ['a....', 'b…...', 'HHHHH'])
+let g:pastel_color_size=6
+let g:pastel_bg_size=2
+
+"the detail's pixels and highlight
+call s:Rendered('td|d', '%x', '#ff8800')
+let s:Pixel=s:Fn('Pixel')
+call s:Check('pixels: a detail cell', s:Pixel(10, 0), 'e')
+call s:Check('pixels: a detail cell, bottom', s:Pixel(19, 9), 'e')
+call s:Check('pixels: the other detail cell', s:Pixel(0, 10), 'e')
+call s:Check('pixels: not a detail cell', s:Pixel(0, 0), 'l')
+call s:Check('pixels: outside', s:Pixel(10, 10), 'n')
+call s:Rendered('kd', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')
+call s:Check('pixels: grown region', s:Pixel(35, 4), 'e')
+call s:Check('pixels: not grown further', s:Pixel(36, 4), 'n')
+let s:popup=popup_list()[0]
+call s:Check('detail text has its own highlight', map(prop_list(1, {'bufnr': winbufnr(s:popup)}), 'v:val.type'), ['pastelpkk', 'pasteldetail'])
+call s:Check('detail highlight exists', hlexists('PastelDetail'), 1)
+call s:Check('detail highlight is linked to Normal', synIDattr(synIDtrans(hlID('PastelDetail')), 'name'), 'Normal')
+call s:Check('detail property type exists', !empty(prop_type_get('pasteldetail')), 1)
+
+"the detail format is an option: invalid values warn and the default is used,
+"it is overridden per buffer, and a string is for the first region only
+let g:pastel_color_mode='d'
+let g:pastel_detail_format='%x'
+for s:value in ['%q', '%', 5, {}, [5], ['%x', '%q'], '%{hsl}', '%r:q', '%t:p', '%{r']
+  let s:before=s:Warnings()
+  let g:pastel_detail_format=s:value
+  let s:shown=s:Rendered('d', s:value, '#ff8800')
+  call s:Check('format '.string(s:value).': the default is used', s:shown[0], '#ff8800...')
+  call s:Check('format '.string(s:value).': a warning', s:Warnings()-s:before, 1)
+endfor
+let g:pastel_detail_format='%x'
+call s:Check('format: the reason is in the warning', len(filter(split(execute('messages'), "\n"), 'v:val =~# "^pastel: g:pastel_detail_format: %t: modifier not allowed$"')), 1)
+let s:before=s:Warnings()
+call s:Check('format: valid list', s:Rendered('d', ['%r'], '#ff8800')[0], '255.......')
+call s:Check('format: no warning for valid values', s:Warnings(), s:before)
+let g:pastel_detail_format='%x'
+let g:pastel_color_mode='d'
+enew!
+let &filetype='css'
+let b:pastel_detail_format='[%t]'
+call setline(1, '#ff8800')
+call cursor(1, 1)
+call s:Fn('OnCursorMove')()
+call s:Check('format: buffer-local', getbufline(winbufnr(popup_list()[0]), 1)[0][:8], '[#ff8800]')
+enew!
+call setline(1, '#ff8800')
+call cursor(1, 1)
+call s:Fn('OnCursorMove')()
+call s:Check('format: buffer-local does not leak', getbufline(winbufnr(popup_list()[0]), 1)[0][:6], '#ff8800')
+call s:Check('format: no detail_mode', exists('g:pastel_detail_mode'), 0)
+let g:pastel_color_mode='k'
+let g:pastel_detail_format='%x'
 
 "placement: [start, fits] of a popup of a size on an axis, from the positions
 "[first, last] of the code, an offset and the limits low..high
