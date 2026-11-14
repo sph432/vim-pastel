@@ -848,7 +848,22 @@ function s:Hide()
   endif
 endfunction
 
+"the screen column of the cursor is not up to date during CursorMoved if there
+"is concealed text on the line, so the popup is placed again after the redraw
+let s:replace=0
+
+function s:OnReplace(id) abort
+  let s:replace=0
+  call s:Update(0)
+endfunction
+
 function s:OnCursorMove() abort
+  call s:Update(1)
+endfunction
+
+"show, move or hide the popup as the cursor requires; a:again says whether it
+"may be placed again later
+function s:Update(again) abort
   call s:CheckPopup()
   call s:ReadSizes()
   call s:UpdateLayout()
@@ -870,6 +885,9 @@ function s:OnCursorMove() abort
     endif
     call s:UpdateTimer()
     call s:SetPopupContent(s:pastel_win)
+    if a:again && &conceallevel > 0 && !s:replace
+      let s:replace=timer_start(0, function('s:OnReplace'))
+    endif
   endif
 endfunction
 
