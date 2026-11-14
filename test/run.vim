@@ -390,6 +390,145 @@ for s:code in ['#ff8800', '#12345678']
   call s:Check('highlight groups for '.s:code, s:wrong, [])
 endfor
 
+"invalid options: no error is raised on a cursor movement, a warning is shown
+"once per value, and the default is used
+
+"the number of warnings about options shown so far
+function s:Warnings()
+  return len(filter(split(execute('messages'), "\n"), 'v:val =~# "^pastel: [gb]:.* is not "'))
+endfunction
+
+"move the cursor onto the first color of a css buffer holding a:text, with the
+"popup updated; returns what is raised, if anything, and the popup's position
+"and size
+function s:Shown(text)
+  enew!
+  let &filetype='css'
+  call setline(1, a:text)
+  call cursor(1, 2)
+  let raised=''
+  try
+    call s:Fn('OnCursorMove')()
+  catch
+    let raised=v:exception
+  endtry
+  let pos=popup_getpos(popup_list()[0])
+  return [raised, pos.col, pos.line, pos.width, pos.height]
+endfunction
+
+let g:pastel_color_mode='k'
+"an 8-digit code, in a filetype, so that all options are read
+let s:text=' #ff8800cc'
+let s:normal=s:Shown(s:text)
+call s:Check('default popup', s:normal[0], '')
+
+"each option with its default and some invalid values
+let s:options=[
+\ ['color_size', 6, ['x', 0, -3, 2.5, [], '', 1001, 100000, {}]],
+\ ['bg_size', 2, ['x', -1, 2.5, [], '', 1001, 100000, {}]],
+\ ['offset_x', 2, ['x', 2.5, [], '', {}]],
+\ ['offset_y', 0, ['x', 2.5, [], '', {}]],
+\ ['color_timer', 5, ['x', [], '', {}]],
+\ ['black_bg', '#000000', ['x', 123, [], '', '#12', '#GGGGGG', 'two words']],
+\ ['white_bg', '#FFFFFF', ['x', 123, [], '', '#12']],
+\ ['trans_fg', '#BFBFBF', ['x', 123, []]],
+\ ['trans_bg', '#404040', ['x', 123, []]],
+\ ['alpha_position', 'auto', ['x', 5, [], '', 'FIRST', 'middle']],
+\ ['alpha_first_filetypes', ['java', 'kotlin'], ['x', 5, {}, [5], [[]], '']],
+\ ['ignore_filetypes', ['gitcommit', '*sql*'], ['x', 5, {}, [5], [[]], '']],
+\ ]
+for [s:name, s:default, s:invalid] in s:options
+  let s:variable='g:pastel_'.s:name
+  for s:value in s:invalid
+    let s:what=s:variable.'='.string(s:value)
+    execute 'let '.s:variable.'=s:value'
+    let s:before=s:Warnings()
+    let s:shown=s:Shown(s:text)
+    call s:Check(s:what.': raises nothing', s:shown[0], '')
+    call s:Check(s:what.': one warning', s:Warnings()-s:before, 1)
+    call s:Shown(s:text)
+    call s:Shown(s:text)
+    call s:Check(s:what.': warned once', s:Warnings()-s:before, 1)
+    call s:Check(s:what.': popup as with the default', s:shown[1:], s:normal[1:])
+  endfor
+  execute 'let '.s:variable.'=s:default'
+endfor
+
+"valid values do not warn, and are used; a number may also be a string
+let s:before=s:Warnings()
+let g:pastel_color_size='1'
+call s:Check('color_size as a string', s:Shown(s:text)[3:], [5, 3])
+let g:pastel_color_size=6
+let g:pastel_bg_size=0
+call s:Check('bg_size 0', s:Shown(s:text)[3:], [6, 3])
+let g:pastel_bg_size='2'
+call s:Check('bg_size as a string', s:Shown(s:text)[3:], [10, 5])
+let g:pastel_offset_x='3'
+call s:Check('offset_x as a string', s:Shown(s:text)[1], s:normal[1]+1)
+let g:pastel_offset_x=2
+let g:pastel_color_timer=0.5
+let g:pastel_color_timer='1.5'
+let g:pastel_color_timer=-1
+let g:pastel_color_timer=5
+let g:pastel_black_bg='red'
+call s:Shown(s:text)
+let g:pastel_black_bg='NONE'
+call s:Shown(s:text)
+let g:pastel_black_bg='#000000'
+let g:pastel_alpha_position='first'
+call s:Shown(s:text)
+let g:pastel_alpha_position='auto'
+call s:Check('valid values do not warn', s:Warnings(), s:before)
+
+"a bad value shown again after another bad one warns again
+let g:pastel_color_size='y'
+let s:before=s:Warnings()
+call s:Shown(s:text)
+let g:pastel_color_size='z'
+call s:Shown(s:text)
+call s:Check('another bad value warns again', s:Warnings()-s:before, 2)
+let g:pastel_color_size=6
+
+"the defaults are used for bad colors, which are read back from the popup
+let g:pastel_black_bg='nonsense'
+call s:Check('bad color: black', s:Pixels('#ff8800')[0][0], '#000000')
+let g:pastel_black_bg='#000000'
+let g:pastel_white_bg=[]
+let g:pastel_color_mode='w'
+call s:Check('bad color: white', s:Pixels('#ff8800')[0][0], '#ffffff')
+let g:pastel_white_bg='#FFFFFF'
+let g:pastel_color_mode='k'
+
+"a bad position of the alpha in a buffer leaves the global one in effect, and
+"a bad global one is as if unset
+let g:pastel_alpha_position='last'
+call s:Check('bad b:pastel_alpha_position, global last', s:At('#ff000080', 2, '', 'nonsense'), [[255, 0, 0, 502], 0, 9])
+let g:pastel_alpha_position='first'
+call s:Check('bad b:pastel_alpha_position, global first', s:At('#80ff0000', 2, '', 'nonsense'), [[255, 0, 0, 502], 0, 9])
+let g:pastel_alpha_position='nonsense'
+call s:Check('bad g:pastel_alpha_position: auto', s:At('#ff000080', 2, 'css'), [[255, 0, 0, 502], 0, 9])
+let g:pastel_alpha_position='auto'
+
+"a string for a list option is not taken for a list of its characters: the
+"default list stays in effect
+let g:pastel_ignore_filetypes='css'
+call s:Check('ignore_filetypes as a string: not ignored', s:At('#fff', 2, 'css'), [[255, 255, 255, 1000], 0, 4])
+call s:Check('ignore_filetypes as a string: default used', s:At('#fff', 2, 'sql'), [])
+let g:pastel_ignore_filetypes=['gitcommit', '*sql*']
+
+"sizes too large to draw are clipped to the screen: they used to hang Vim
+let g:pastel_color_size=1000
+let g:pastel_bg_size=1000
+let g:pastel_color_mode='kkkkkk|kkkkkk'
+let s:shown=s:Shown(s:text)
+let s:popup=popup_list()[0]
+call s:Check('huge popup: raises nothing', s:shown[0], '')
+call s:Check('huge popup: lines limited to the screen', line('$', s:popup) <= &lines, 1)
+call s:Check('huge popup: width limited to the screen', max(map(getbufline(winbufnr(s:popup), 1, '$'), 'strchars(v:val)')) <= &columns, 1)
+let g:pastel_color_size=6
+let g:pastel_bg_size=2
+let g:pastel_color_mode='k'
+
 "print the results, which :print does to the standard output in Ex mode
 function s:Report(lines)
   enew!
