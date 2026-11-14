@@ -94,6 +94,11 @@ All options are global variables, set in your `.vimrc` or at any time later
 with `:let`; a change takes effect the next time the popup is shown. The
 defaults are shown in parentheses.
 
+A value that is not valid for its option (eg. a float or a list for a size, or
+`'FIRST'` for `g:pastel_alpha_position`) raises no error: a short warning is
+shown, once per value, and the default is used instead. Numbers may also be
+given as strings, eg. `'6'`.
+
 - `g:pastel_color_mode` (`'k'`) - the previews to show and their layout, a
     string of block letters, left to right:
   - `k`: the color on black
@@ -121,9 +126,9 @@ defaults are shown in parentheses.
     alternating off, showing the first background. The timer only runs while
     the popup is shown.
 - `g:pastel_color_size` (`6`) - size of the color block, vertically in
-    half-characters and horizontally in characters
+    half-characters and horizontally in characters, from 1 to 1000
 - `g:pastel_bg_size` (`2`) - size of the margin around the color block, in the
-    same units
+    same units, from 0 to 1000
 - `g:pastel_alpha_position` (`'auto'`) - where the alpha is in 8-digit
     hexadecimal codes:
   - `'last'`: `#RRGGBBAA`, as in CSS
@@ -159,6 +164,9 @@ defaults are shown in parentheses.
 - `g:pastel_trans_fg` (`'#BFBFBF'`) and `g:pastel_trans_bg` (`'#404040'`) -
     the two colors of the checkered "transparent" background
 
+The colors are `#RRGGBB` ones or color names Vim knows, eg. `'red'` or
+`'NONE'`.
+
 If the popup does not fit on the screen at the requested offset, the offset is
 inverted along that axis (eg. `2` becomes `-2`). If there is no room on either
 side of the code, the popup is placed below the code's line instead, or above
@@ -167,7 +175,7 @@ offset is used for the distance, or `1` if it is `0`. If it fits nowhere, it is
 moved onto the screen as far as possible.
 
 A popup larger than the screen is clipped, not wrapped, and a warning is shown
-once.
+once; only the part on the screen is drawn.
 
 Sizes may be odd, in which case the color block starts or ends in the middle
 of a line. If the total height is odd, the lower half of the last line is left

@@ -54,6 +54,10 @@ CONTENTS                                                     *pastel-contents*
     All options are global variables, set in your vimrc or at any time later
     with :let; a change takes effect the next time the popup is shown.
 
+    A value that is not valid for its option, eg. a float or a list for a
+    size, raises no error: a short warning is shown, once per value, and the
+    default is used instead. Numbers may also be given as strings, eg. '6'.
+
 g:pastel_color_mode  (default "k")                       *g:pastel_color_mode*
     The previews to show and their layout: a string of block letters, left to
     right, with these meanings:
@@ -81,10 +85,11 @@ g:pastel_color_timer  (default 5)                       *g:pastel_color_timer*
 
 g:pastel_color_size  (default 6)                         *g:pastel_color_size*
     Size of the color block, vertically in half-characters and horizontally in
-    characters, so that it looks square.
+    characters, so that it looks square. From 1 to 1000.
 
 g:pastel_bg_size  (default 2)                               *g:pastel_bg_size*
-    Size of the margin around the color block, in the same units.
+    Size of the margin around the color block, in the same units, from 0 to
+    1000.
 
 g:pastel_alpha_position  (default "auto")            *g:pastel_alpha_position*
     Where the alpha is in 8-digit hexadecimal codes:
@@ -130,7 +135,7 @@ g:pastel_offset_y  (default 0)                             *g:pastel_offset_y*
     screen is clipped, and a warning is shown once.
 
 g:pastel_black_bg  (default "#000000")                     *g:pastel_black_bg*
-    The color of the black background.
+    The color of the black background: #RRGGBB, or a color name Vim knows.
 
 g:pastel_white_bg  (default "#FFFFFF")                     *g:pastel_white_bg*
     The color of the white background.
