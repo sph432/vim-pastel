@@ -132,19 +132,35 @@
     have `SafeState`; older versions update it on the next cursor movement)
 - Popup far from the code when text on the line is concealed
 
-# 0.8 - preprocessor colors (planned)
-## 0.8.0 (planned)
+# 0.8 - per-buffer options
+## 0.8.0
 #### Added
-- Colors in Sass and Less functions with a color argument, eg.
-    `rgba(#fff, 0.5)`
+- Per-buffer overrides of the options, `b:pastel_<name>`, validated like the
+    global ones: for all but `g:pastel_color_mode` and the color options, which
+    belong to the single shared popup; `b:pastel_alpha_position` was the only
+    one before
 
 #### Changed
 - The default of `g:pastel_color_mode` is now `'t'` (the checkered
     background, as in sharkdp/pastel), as it was `'k'`; set it to `'k'` to
     keep the black one
 
-# 1.x - color spaces (planned)
+# 0.9 - details (planned)
+## 0.9.0 (planned)
 #### Added
+- Shown color formats adjustable with `g:pastel_detail_mode`: the color's
+    value as text below the previews, in hexadecimal, `rgb` and others
+
+# 0.x - several popups (planned)
+#### Added
+- A popup for each window or buffer instead of the single shared one, and with
+    it per-buffer layout (`b:pastel_color_mode`) and colors; it may be done
+    only in 1.0.0
+
+# 1.x - beyond 1.0 (planned)
+#### Added
+- Colors in Sass and Less functions with a color argument, eg.
+    `rgba(#fff, 0.5)`
 - `lab()`, `lch()`, `oklab()` and `oklch()`, only in the space and slash
     notation, as in CSS Color 4
 - `color()` with the predefined color spaces, eg. `display-p3`
@@ -152,8 +168,6 @@
     being clamped to it
 
 # TODO
-- Shown color formats adjustable: hexadecimal, `rgb`, `cmyk`
-    (`g:pastel_detail_mode`)
 - Color notations from outside the web: no source of truth was surveyed yet
     (eg. languages' color literals, X11 `rgb:RR/GG/BB`, LaTeX)
 - CMY, CMYK and CMYKA notations: there is no agreed-upon syntax, not even in
