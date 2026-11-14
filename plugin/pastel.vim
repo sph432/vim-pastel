@@ -132,9 +132,9 @@ endfunction
 "  | - put the blocks following it in a new row
 "
 "blocks are of the same size (see below), each with its own margin
-" sharkdp/pastel's look would be "t",
-" other suggested combinations are "2t", "t|kw" and "3"
-let g:pastel_color_mode=get(g:, 'pastel_color_mode', 'k')
+" "t" is sharkdp/pastel's look,
+" other suggested combinations are "k", "2t", "t|kw" and "3"
+let g:pastel_color_mode=get(g:, 'pastel_color_mode', 't')
 
 "alternate between backgrounds every n seconds in "2" and "3" blocks, 0.1 or
 "more; less than that turns alternating off, showing the first background
