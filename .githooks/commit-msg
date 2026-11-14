@@ -1,0 +1,186 @@
+#!/usr/bin/env bash
+# Git commit-msg hook to validate against CoCo conventions
+# Based on rules defined in CoCo.md
+
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Get the first line (subject line)
+SUBJECT=$(echo "$COMMIT_MSG" | head -n 1)
+
+# Color codes for output
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Check if this is a merge commit (skip validation)
+if echo "$COMMIT_MSG" | grep -q "^Merge branch"; then
+    exit 0
+fi
+
+# Check for BREAKING CHANGE footer which is FORBIDDEN
+if echo "$COMMIT_MSG" | grep -qE "^BREAKING CHANGE:"; then
+    echo -e "${RED}Error: BREAKING CHANGE: footer is forbidden in CoCo.${NC}"
+    echo -e "${YELLOW}Use '!' prefix before the noun instead (e.g., '!feat: ...')${NC}"
+    exit 1
+fi
+
+# Parse the subject line
+# Pattern: [!]NOUN[(SCOPE)]: ACTION
+# Noun can be padded with spaces and must be 4 chars or shorter
+# Special case: "init" can stand alone without colon or action
+if ! echo "$SUBJECT" | grep -qE "^(!?[ ]*[a-z]+(\([^)]+\))?: .+|!?[ ]*init)$"; then
+    echo -e "${RED}Error: Commit message does not match CoCo format.${NC}"
+    echo -e "${YELLOW}Expected format: [!]noun[(scope)]: describe action${NC}"
+    echo -e "${YELLOW}Or simple format: [!]noun: describe action${NC}"
+    echo -e "${YELLOW}Examples:${NC}"
+    echo -e "${YELLOW}  feat(api): add user authentication${NC}"
+    echo -e "${YELLOW}  ! fix: remove deprecated endpoint${NC}"
+    echo -e "${YELLOW}   dep: update dependencies${NC}"
+    exit 1
+fi
+
+# Extract components
+BREAKING=""
+NOUN=""
+SCOPE=""
+ACTION=""
+
+# Check for breaking change marker
+if [[ "$SUBJECT" =~ ^! ]]; then
+    BREAKING="!"
+    SUBJECT_WITHOUT_BREAKING="${SUBJECT:1}"
+else
+    SUBJECT_WITHOUT_BREAKING="$SUBJECT"
+fi
+
+# Extract noun, scope, and action
+if [[ "$SUBJECT_WITHOUT_BREAKING" =~ ^([[:space:]]*)([a-z]+)\(([^\)]+)\):[[:space:]]*(.+)$ ]]; then
+    # Format with scope
+    PADDING="${BASH_REMATCH[1]}"
+    NOUN="${BASH_REMATCH[2]}"
+    SCOPE="${BASH_REMATCH[3]}"
+    ACTION="${BASH_REMATCH[4]}"
+elif [[ "$SUBJECT_WITHOUT_BREAKING" =~ ^([[:space:]]*)([a-z]+):[[:space:]]*(.+)$ ]]; then
+    # Format without scope
+    PADDING="${BASH_REMATCH[1]}"
+    NOUN="${BASH_REMATCH[2]}"
+    ACTION="${BASH_REMATCH[3]}"
+elif [[ "$SUBJECT_WITHOUT_BREAKING" =~ ^([[:space:]]*)([a-z]+)$ ]]; then
+    # Format without scope or action (like "init")
+    PADDING="${BASH_REMATCH[1]}"
+    NOUN="${BASH_REMATCH[2]}"
+    ACTION=""
+else
+    echo -e "${RED}Error: Could not parse commit message format.${NC}"
+    exit 1
+fi
+
+# Validate noun length (must be 4 chars or shorter, excluding padding)
+NOUN_LEN=${#NOUN}
+if [ "$NOUN_LEN" -gt 4 ]; then
+    echo -e "${RED}Error: Noun '$NOUN' is too long (${NOUN_LEN} chars).${NC}"
+    echo -e "${YELLOW}Nouns must be 4 characters or shorter.${NC}"
+    exit 1
+fi
+
+# Validate padding for nouns shorter than 4 chars
+EXPECTED_PADDING=$((4 - NOUN_LEN))
+ACTUAL_PADDING=${#PADDING}
+
+if [ "$NOUN_LEN" -lt 4 ] && [ "$ACTUAL_PADDING" -ne "$EXPECTED_PADDING" ]; then
+    echo -e "${RED}Error: Noun '$NOUN' (${NOUN_LEN} chars) must be left-padded with ${EXPECTED_PADDING} space(s).${NC}"
+    echo -e "${YELLOW}Expected: '${BREAKING}$(printf '%*s' $EXPECTED_PADDING)${NOUN}'${NC}"
+    exit 1
+fi
+
+# Define valid nouns
+VALID_BASE_NOUNS=("feat" "fix" "rfct" "styl")
+VALID_AUX_NOUNS=("dep" "docs" "test" "tool")
+VALID_TECH_NOUNS=("init" "amnd" "undo")
+ALL_VALID_NOUNS=("${VALID_BASE_NOUNS[@]}" "${VALID_AUX_NOUNS[@]}" "${VALID_TECH_NOUNS[@]}")
+
+# Check if noun is valid
+NOUN_VALID=0
+for valid_noun in "${ALL_VALID_NOUNS[@]}"; do
+    if [ "$NOUN" == "$valid_noun" ]; then
+        NOUN_VALID=1
+        break
+    fi
+done
+
+if [ "$NOUN_VALID" -eq 0 ]; then
+    echo -e "${RED}Error: Invalid noun '$NOUN'.${NC}"
+    echo -e "${YELLOW}Valid nouns:${NC}"
+    echo -e "${YELLOW}  Base: feat, fix, rfct, styl${NC}"
+    echo -e "${YELLOW}  Auxiliary: dep, docs, test, tool${NC}"
+    echo -e "${YELLOW}  Technical: init, amnd, undo${NC}"
+    exit 1
+fi
+
+# Technical nouns must NOT have a scope
+TECH_NOUN=0
+for tech_noun in "${VALID_TECH_NOUNS[@]}"; do
+    if [ "$NOUN" == "$tech_noun" ]; then
+        TECH_NOUN=1
+        break
+    fi
+done
+
+if [ "$TECH_NOUN" -eq 1 ] && [ -n "$SCOPE" ]; then
+    echo -e "${RED}Error: Technical noun '$NOUN' must NOT contain a scope.${NC}"
+    echo -e "${YELLOW}Technical nouns (init, amnd, undo) are repository-wide.${NC}"
+    exit 1
+fi
+
+# Validate action presence
+if [ "$NOUN" == "init" ]; then
+    # init: Action SHOULD be empty
+    if [ -n "$ACTION" ]; then
+        echo -e "${YELLOW}Warning: 'init' commit action should be empty.${NC}"
+    fi
+elif [ "$NOUN" == "amnd" ]; then
+    # amnd: Action MUST be the amended commit's id
+    if ! echo "$ACTION" | grep -qE "^[0-9a-f]{7,40}$"; then
+        echo -e "${RED}Error: 'amnd' action must be a commit ID.${NC}"
+        exit 1
+    fi
+elif [ "$NOUN" == "undo" ]; then
+    # undo: Action MUST be the id of the reverted commit(s)
+    if ! echo "$ACTION" | grep -qE "^[0-9a-f]{7,40}"; then
+        echo -e "${RED}Error: 'undo' action must be commit ID(s).${NC}"
+        exit 1
+    fi
+else
+    # All other nouns must have an action
+    if [ -z "$ACTION" ]; then
+        echo -e "${RED}Error: Action is required for noun '$NOUN'.${NC}"
+        echo -e "${YELLOW}Action must start with a present simple verb.${NC}"
+        exit 1
+    fi
+    
+    # Validate that action starts with a lowercase letter
+    # Exception: 'fix' noun can use implicit verb action (describing the problem)
+    if ! echo "$ACTION" | grep -qE "^[a-z]"; then
+        echo -e "${RED}Error: Action must start with a lowercase letter.${NC}"
+        echo -e "${YELLOW}Current action: '$ACTION'${NC}"
+        exit 1
+    fi
+    
+    # For most nouns, validate that action starts with a present simple verb
+    # 'fix' can use implicit verb (e.g., "fix(scope): broken functionality")
+    if [ "$NOUN" != "fix" ]; then
+        # Check if action starts with a common verb pattern
+        # Allow common verb forms but warn if suspicious
+        FIRST_WORD=$(echo "$ACTION" | awk '{print $1}')
+        if [[ "$FIRST_WORD" =~ ^[A-Z] ]]; then
+            echo -e "${RED}Error: Action must start with a lowercase present simple verb.${NC}"
+            echo -e "${YELLOW}Current action: '$ACTION'${NC}"
+            exit 1
+        fi
+    fi
+fi
+
+# All checks passed
+echo -e "✓ Commit message complies with CoCo conventions"
+exit 0
