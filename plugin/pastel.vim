@@ -751,6 +751,19 @@ function s:Rows()
   return [1+tabline, &lines-&cmdheight-status]
 endfunction
 
+"[first, last] screen columns of a code a:length cells long, of which the
+"character a:before cells from its start is at screen column a:scrcol; its
+"characters are one cell wide; it is mirrored in right-to-left windows, where
+"it starts at its right end
+function s:CodeColumns(scrcol, before, length, rightleft)
+  if a:rightleft
+    let last=a:scrcol+a:before
+    return [last-(a:length-1), last]
+  endif
+  let first=a:scrcol-a:before
+  return [first, first+a:length-1]
+endfunction
+
 "popup position for the code at byte range [mbeg, mend); if there is no room
 "on either side of the code, the popup goes above or below its line instead
 function s:Position(mbeg, mend)
@@ -767,9 +780,8 @@ function s:Position(mbeg, mend)
   let [wrow, wcol]=win_screenpos(0)
   let scrcol=wcol+wincol()-1
   let scrrow=wrow+winline()-1
-  let first=scrcol-(cur-a:mbeg)
-  let [left, fits]=s:Axis(first, scrcol+(a:mend-1-cur), w,
-\                         s:Opt('offset_x'), 1, &columns)
+  let [first, last]=s:CodeColumns(scrcol, cur-a:mbeg, a:mend-a:mbeg, &rightleft)
+  let [left, fits]=s:Axis(first, last, w, s:Opt('offset_x'), 1, &columns)
   if fits
     let [top, fits]=s:Axis(scrrow, scrrow, h, offset_y, minline, maxline)
   else
