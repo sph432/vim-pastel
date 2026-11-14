@@ -94,26 +94,43 @@ endfunction
 "            digits if it is not 1, in lower and upper case
 "  %t        the color code as it is written in the buffer
 "  %{id}     the number of the detail region
-"a number may be followed by modifiers, each after a colon: p for a percent,
-"P for a percent without the sign, f for a fraction, x or X for two hex
-"digits, .N for N decimals (of p, P and f); o omits an opaque alpha; a makes
-"%x and %X always have the alpha; a % with a colon-letter after it is thus
-"always a modifier, so a colon and a letter after an item are written %{r}:x
+"  %{rgb} %{hsl} %{hwb} %{hsv} %{cmyk}
+"            the color as a whole, eg. hsl(32 100% 50%)
+"  %{hsl.s}  one of its values, in the same models: rgb r g b, hsl h s l,
+"            hsv h s v, hwb h w b, cmyk c m y k
+"  %#Group#  the text after it is highlighted with Group, until %*
+"  %(  %)    text that is left out if an item in it is empty
+"an item with a number may be followed by modifiers, each after a colon: p for
+"a percent, P for a percent without the sign, f for a fraction, x or X for two
+"hex digits, .N for N decimals (of p, P and f, and of the values of the models
+"and the hue), o omits an opaque alpha, a makes %x, %X and the models always
+"have the alpha, c makes them use the old comma notation; a colon and a letter
+"after an item are thus always a modifier, so to have them as text it is
+"written %{r}:x
 "all other letters and some symbols are reserved for later; an item that is not
 "known is an error and not text, so that its meaning can be added later
 let s:fallback='Region %{id}%n%x'
-let s:future_names=['rgb', 'rgba', 'hex', 'hsl', 'hsla', 'hwb', 'hwba', 'hsv',
-\                   'hsva', 'cmy', 'cmyk', 'lab', 'lch', 'oklab', 'oklch',
-\                   'color', 'name', 'xyz', 'gray']
+"names that may be used later
+let s:future_names=['rgba', 'hex', 'hsla', 'hwba', 'hsva', 'cmy', 'lab', 'lch',
+\                   'oklab', 'oklch', 'color', 'name', 'xyz', 'gray']
+"the models: their values, in the order of their notation
+let s:models={'rgb': ['r', 'g', 'b'], 'hsl': ['h', 's', 'l'],
+\             'hsv': ['h', 's', 'v'], 'hwb': ['h', 'w', 'b'],
+\             'cmyk': ['c', 'm', 'y', 'k']}
 
 "[tokens, why] of the item a:name with the modifiers a:mods; why is '' if it
 "is valid
 function s:Item(name, mods)
   let shown='%'.(len(a:name) == 1 ? a:name : '{'.a:name.'}')
+  let [model, value]=[matchstr(a:name, '^\a*'), matchstr(a:name, '\.\zs.*')]
+  let composite=has_key(s:models, a:name)
+  let component=a:name =~# '\.' && has_key(s:models, model)
+\                && index(s:models[model], value) >= 0
   if index(['r', 'g', 'b', 'a', 'x', 'X', 't', 'id'], a:name) < 0
+\    && !composite && !component
     if a:name =~# '^\a$'
       return [[], shown.' is reserved']
-    elseif index(s:future_names, matchstr(a:name, '^\a*')) >= 0
+    elseif index(s:future_names, model) >= 0
       return [[], shown.' is unsupported']
     endif
     return [[], shown.' is not known']
@@ -122,6 +139,7 @@ function s:Item(name, mods)
   let precision=-1
   let omit=0
   let force=0
+  let comma=0
   for mod in a:mods
     if mod =~# '^[pPfxX]$'
       if format !=# ''
@@ -137,18 +155,28 @@ function s:Item(name, mods)
       let omit=1
     elseif mod ==# 'a'
       let force=1
+    elseif mod ==# 'c'
+      let comma=1
     else
       return [[], shown.':'.mod.' is not a modifier']
     endif
   endfor
+  let any=format !=# '' || precision >= 0 || omit || force || comma
   if a:name =~# '^[xX]$'
-    let ok=format ==# '' && precision < 0 && !omit
+    let ok=format ==# '' && precision < 0 && !omit && !comma
   elseif a:name ==# 'a'
-    let ok=!force && (precision < 0 || format !~# '[xX]')
-  elseif a:name =~# '^[rgb]$'
-    let ok=!omit && !force && (precision < 0 || format =~# '[pPf]')
+    let ok=!force && !comma && (precision < 0 || format !~# '[xX]')
+  elseif a:name =~# '^[rgb]$' || a:name =~# '^rgb\.'
+    let ok=!omit && !force && !comma
+\          && (precision < 0 || format =~# '[pPf]')
+  elseif composite
+    let ok=format ==# '' && !omit && (precision < 0 || a:name !=# 'rgb')
+\          && !(comma && a:name ==# 'hwb')
+  elseif component
+    let ok=format !~# '[xX]' && !omit && !force && !comma
+\          && (value !=# 'h' || format !~# '[pP]')
   else
-    let ok=format ==# '' && precision < 0 && !omit && !force
+    let ok=!any
   endif
   if !ok
     return [[], shown.': modifier not allowed']
@@ -160,24 +188,36 @@ function s:Item(name, mods)
 \            {'t': 'value', 'n': 'g', 'f': hex, 'p': -1, 'o': 0},
 \            {'t': 'value', 'n': 'b', 'f': hex, 'p': -1, 'o': 0},
 \            {'t': 'value', 'n': 'a', 'f': hex, 'p': -1, 'o': !force}], '']
+  elseif composite
+    return [[{'t': 'whole', 'n': a:name, 'p': precision, 'force': force,
+\             'comma': comma}], '']
   endif
-  return [[{'t': 'value', 'n': a:name, 'f': format, 'p': precision,
+  let name=a:name =~# '^rgb\.' ? value : a:name
+  "a value that is a part of a whole is by default shown as in it
+  if format ==# '' && component && value !=# 'h' && model !=# 'rgb'
+    let format='p'
+  endif
+  return [[{'t': 'value', 'n': name, 'f': format, 'p': precision,
 \           'o': omit}], '']
 endfunction
 
 "[tokens, why] of a:template, why being '' if it is valid and what is wrong
-"with it if not
+"with it if not; a group of items is a token of its own, in which only text
+"and numbers can be
 function s:ParseTemplate(template)
   let tokens=[]
+  let group=[]
+  let ingroup=0
   let pos=0
   while pos < len(a:template)
     let percent=stridx(a:template, '%', pos)
     if percent < 0
-      call add(tokens, {'t': 'text', 's': strpart(a:template, pos)})
+      call add(ingroup ? group : tokens,
+\              {'t': 'text', 's': strpart(a:template, pos)})
       break
     elseif percent > pos
-      call add(tokens, {'t': 'text',
-\                       's': strpart(a:template, pos, percent-pos)})
+      call add(ingroup ? group : tokens,
+\              {'t': 'text', 's': strpart(a:template, pos, percent-pos)})
     endif
     let pos=percent+1
     let char=strpart(a:template, pos, 1)
@@ -185,7 +225,21 @@ function s:ParseTemplate(template)
     if char ==# ''
       return [[], 'a % at the end, write %%']
     elseif char ==# '%'
-      call add(tokens, {'t': 'text', 's': '%'})
+      call add(ingroup ? group : tokens, {'t': 'text', 's': '%'})
+      let pos+=1
+      continue
+    elseif char =~# '^[nN#*(]$' && ingroup
+      return [[], '%'.char.' is not allowed in %( %)']
+    elseif char ==# '('
+      let ingroup=1
+      let pos+=1
+      continue
+    elseif char ==# ')'
+      if !ingroup
+        return [[], '%) without a %(']
+      endif
+      call add(tokens, {'t': 'group', 'tokens': group})
+      let [group, ingroup]=[[], 0]
       let pos+=1
       continue
     elseif char ==# 'n'
@@ -195,6 +249,19 @@ function s:ParseTemplate(template)
     elseif char ==# 'N'
       call add(tokens, {'t': 'soft'})
       let pos+=1
+      continue
+    elseif char ==# '*'
+      call add(tokens, {'t': 'highlight', 'g': ''})
+      let pos+=1
+      continue
+    elseif char ==# '#'
+      let close=stridx(a:template, '#', pos+1)
+      let name=close < 0 ? '' : strpart(a:template, pos+1, close-pos-1)
+      if name !~# '^[A-Za-z0-9_.@-]\+$'
+        return [[], '%# needs a group name and a closing #']
+      endif
+      call add(tokens, {'t': 'highlight', 'g': name})
+      let pos=close+1
       continue
     elseif char ==# '{'
       let close=stridx(a:template, '}', pos)
@@ -216,8 +283,6 @@ function s:ParseTemplate(template)
         call add(mods, mod)
         let pos+=len(mod)+1
       endwhile
-    elseif char =~# '^[#*()]$'
-      return [[], '%'.char.' is unsupported']
     else
       return [[], '%'.char.' is '.(char =~# '^\a$' ? 'reserved'
 \                                                   : 'not known')]
@@ -226,8 +291,11 @@ function s:ParseTemplate(template)
     if why !=# ''
       return [[], why]
     endif
-    call extend(tokens, items)
+    call extend(ingroup ? group : tokens, items)
   endwhile
+  if ingroup
+    return [[], 'a %( without a %)']
+  endif
   return [tokens, '']
 endfunction
 
@@ -249,52 +317,177 @@ function s:Decimal(number, decimals)
   return a:decimals > 0 ? substitute(text, '\.\?0\+$', '', '') : text
 endfunction
 
+"a:text without a minus if it is a zero, as rounding can make it
+function s:Unsigned(text)
+  return substitute(a:text, '^-\(0\+\(\.0\+\)\?\)$', '\1', '')
+endfunction
+
+"[hue in degrees, saturation, lightness] and so on, 0 to 1 except the hue, of
+"a:color, as {'hsl': [...], ...}, by the models of s:models
+function s:Models(color)
+  let [r, g, b]=map(a:color[:2], 'float2nr(round(v:val))')
+  let high=max([r, g, b])
+  let low=min([r, g, b])
+  let delta=high-low
+  if delta == 0
+    let hue=0.0
+  elseif high == r
+    let hue=60.0*(g-b)/delta
+  elseif high == g
+    let hue=60.0*((b-r)/(delta+0.0)+2)
+  else
+    let hue=60.0*((r-g)/(delta+0.0)+4)
+  endif
+  let hue=hue < 0 ? hue+360 : hue
+  let lightness=(high+low)/510.0
+  let chroma=255.0-abs(high+low-255)
+  let cyan=high == 0 ? 0.0 : (high-r)/(high+0.0)
+  let magenta=high == 0 ? 0.0 : (high-g)/(high+0.0)
+  let yellow=high == 0 ? 0.0 : (high-b)/(high+0.0)
+  return {'rgb': [r, g, b],
+\         'hsl': [hue, delta == 0 ? 0.0 : delta/chroma, lightness],
+\         'hsv': [hue, high == 0 ? 0.0 : delta/(high+0.0), high/255.0],
+\         'hwb': [hue, low/255.0, 1-high/255.0],
+\         'cmyk': [cyan, magenta, yellow, 1-high/255.0]}
+endfunction
+
+"the models of the color last asked for, as [color, s:Models(color)]
+let s:models_of=['', {}]
+
+"[number, kind] of the value a:name of a:color, kind being 'byte' for the 0 to
+"255 of the channels, 'unit' for a 0 to 1 and 'degrees' for the hue
+function s:Quantity(name, color)
+  if a:name ==# 'a'
+    return [a:color[3], 'unit']
+  elseif a:name =~# '^[rgb]$'
+    return [a:color[stridx('rgb', a:name)], 'byte']
+  endif
+  let [model, value]=split(a:name, '\.')
+  let key=join(a:color)
+  if s:models_of[0] !=# key
+    let s:models_of=[key, s:Models(a:color)]
+  endif
+  let number=s:models_of[1][model][index(s:models[model], value)]
+  return [number, value ==# 'h' ? 'degrees' : 'unit']
+endfunction
+
+"the text of a number with a:format and a:precision (-1 if none), of the
+"kind a:kind, SEE s:Quantity
+function s:Format(number, kind, format, precision)
+  let fraction=a:kind ==# 'byte' ? a:number/255.0
+\            : a:kind ==# 'degrees' ? a:number/360.0 : a:number
+  if a:format =~# '[xX]'
+    let text=printf('%02x', float2nr(round(fraction*255)))
+    return a:format ==# 'X' ? toupper(text) : text
+  elseif a:format ==# 'p' || a:format ==# 'P'
+    let text=printf('%.'.max([a:precision, 0]).'f', fraction*100)
+    return s:Unsigned(text).(a:format ==# 'p' ? '%' : '')
+  elseif a:format ==# 'f' || a:kind ==# 'unit' && a:format ==# ''
+    return s:Unsigned(a:precision >= 0 ? printf('%.'.a:precision.'f', fraction)
+\                                      : s:Decimal(fraction, 2))
+  elseif a:kind ==# 'degrees'
+    return s:Unsigned(printf('%.'.max([a:precision, 0]).'f', a:number))
+  endif
+  return string(float2nr(round(a:number)))
+endfunction
+
 "the text of a token with a number, of a:color
 function s:Number(token, color)
-  let alpha=a:token.n ==# 'a'
-  if alpha
-    let fraction=a:color[3]
-    if a:token.o && fraction >= 1.0
+  let [number, kind]=s:Quantity(a:token.n, a:color)
+  if a:token.n ==# 'a' && a:token.o && number >= 1.0
+    return ''
+  endif
+  return s:Format(number, kind, a:token.f, a:token.p)
+endfunction
+
+"the text of a whole model, a token of the type 'whole', of a:color
+function s:Notation(token, color)
+  let model=a:token.n
+  let numbers=[]
+  for index in range(len(s:models[model]))
+    let name=model.'.'.s:models[model][index]
+    let [number, kind]=s:Quantity(name, a:color)
+    call add(numbers, model ==# 'rgb' ? s:Format(number, kind, '', -1)
+\      : s:Format(number, kind, kind ==# 'unit' ? 'p' : '', a:token.p))
+  endfor
+  let alpha=a:color[3]
+  let shown=a:token.force || alpha < 1.0
+  let text=a:token.p >= 0 ? printf('%.'.a:token.p.'f', alpha)
+\                         : s:Decimal(alpha, 2)
+  if a:token.comma
+    let name=shown && model =~# '^\%(rgb\|hsl\|hsv\)$' ? model.'a' : model
+    return name.'('.join(numbers, ', ').(shown ? ', '.text : '').')'
+  endif
+  return model.'('.join(numbers, ' ').(shown ? ' / '.text : '').')'
+endfunction
+
+"the text of a group of items, empty if one of them is
+function s:Group(tokens, color, text, id)
+  let result=''
+  for token in a:tokens
+    let part=token.t ==# 'text' ? token.s : s:Piece(token, a:color, a:text,
+\                                                    a:id)
+    if part ==# ''
       return ''
     endif
-  else
-    let value=a:color[stridx('rgb', a:token.n)]
-    let fraction=value/255.0
+    let result.=part
+  endfor
+  return result
+endfunction
+
+"the text of a token that is a value
+function s:Piece(token, color, text, id)
+  if a:token.t ==# 'whole'
+    return s:Notation(a:token, a:color)
+  elseif a:token.n ==# 't'
+    return a:text
+  elseif a:token.n ==# 'id'
+    return a:id
   endif
-  let format=a:token.f
-  if format =~# '[xX]'
-    let text=printf('%02x', float2nr(round(fraction*255)))
-    return format ==# 'X' ? toupper(text) : text
-  elseif format ==# 'p' || format ==# 'P'
-    let text=printf('%.'.max([a:token.p, 0]).'f', fraction*100)
-    return format ==# 'p' ? text.'%' : text
-  elseif format ==# 'f' || alpha
-    return a:token.p >= 0 ? printf('%.'.a:token.p.'f', fraction)
-\                         : s:Decimal(fraction, 2)
+  return s:Number(a:token, a:color)
+endfunction
+
+"a piece of a line, a segment, as {'t': its text, 'h': its highlights, each
+"[first character, after the last character, group]}, with a:text added in
+"the highlight a:group, if any
+function s:Add(segment, text, group)
+  if a:text ==# ''
+    return
   endif
-  return string(float2nr(round(value)))
+  let first=strchars(a:segment.t)
+  let a:segment.t.=a:text
+  if a:group !=# ''
+    let spans=a:segment.h
+    if !empty(spans) && spans[-1][1] == first && spans[-1][2] ==# a:group
+      let spans[-1][1]=first+strchars(a:text)
+    else
+      call add(spans, [first, first+strchars(a:text), a:group])
+    endif
+  endif
 endfunction
 
 "a:template expanded for the color a:color of the code a:text, in the region
-"number a:id, as a list of lines, each a list of the segments between the
-"places where it may be broken
+"number a:id, as a list of lines, each a list of segments, the pieces
+"between the places where it may be broken
 function s:Expand(template, color, text, id)
   let lines=[]
-  let segments=['']
+  let segments=[{'t': '', 'h': []}]
+  let group=''
   for token in s:Template(a:template)[0]
     if token.t ==# 'text'
-      let segments[-1].=token.s
+      call s:Add(segments[-1], token.s, group)
     elseif token.t ==# 'break'
       call add(lines, segments)
-      let segments=['']
+      let segments=[{'t': '', 'h': []}]
     elseif token.t ==# 'soft'
-      call add(segments, '')
-    elseif token.n ==# 't'
-      let segments[-1].=a:text
-    elseif token.n ==# 'id'
-      let segments[-1].=a:id
+      call add(segments, {'t': '', 'h': []})
+    elseif token.t ==# 'highlight'
+      let group=token.g
+    elseif token.t ==# 'group'
+      call s:Add(segments[-1], s:Group(token.tokens, a:color, a:text, a:id),
+\                group)
     else
-      let segments[-1].=s:Number(token, a:color)
+      call s:Add(segments[-1], s:Piece(token, a:color, a:text, a:id), group)
     endif
   endfor
   call add(lines, segments)
@@ -640,6 +833,7 @@ endfunction
 
 function s:DefineHighlights()
   highlight default link PastelDetail Normal
+  let s:dynamic_for={}
   let s:colorkey=s:ColorKey()
   call s:UpdateHex()
   for upper in s:colors
@@ -747,26 +941,58 @@ function s:Size()
   return [s:frame.width, s:frame.lines]
 endfunction
 
-"the text of a:line cut to fit a:width cells, with an ellipsis if it was cut
+"a:line, a segment (SEE s:Add), cut to fit a:width cells, with an ellipsis,
+"in the highlight of what it follows, if it was cut
 function s:Ellipsize(line, width)
-  if strdisplaywidth(a:line) <= a:width
+  if strdisplaywidth(a:line.t) <= a:width
     return a:line
+  elseif a:width <= 0
+    return {'t': '', 'h': []}
   endif
-  return a:width > 0 ? strcharpart(a:line, 0, a:width-1).'…' : ''
+  let keep=a:width-1
+  let spans=[]
+  for span in a:line.h
+    if span[0] < keep
+      call add(spans, [span[0], min([span[1], keep]), span[2]])
+    endif
+  endfor
+  if !empty(spans) && spans[-1][1] == keep
+    let spans[-1][1]=keep+1
+  endif
+  return {'t': strcharpart(a:line.t, 0, keep).'…', 'h': spans}
 endfunction
 
-"the lines of a:segments, the lines of a template expanded, each a list of
-"segments, as fit a:width cells: segments are put on a line as long as they
-"fit, so a line is only broken where it is permitted
+"a:line with an ellipsis added, in the highlight of its end, cut to a:width
+function s:Ellipsis(line, width)
+  let spans=deepcopy(a:line.h)
+  if !empty(spans) && spans[-1][1] == strchars(a:line.t)
+    let spans[-1][1]+=1
+  endif
+  return s:Ellipsize({'t': a:line.t.'…', 'h': spans}, a:width)
+endfunction
+
+"the segment of the segments a:first and a:second one after the other
+function s:Join(first, second)
+  let shift=strchars(a:first.t)
+  let spans=deepcopy(a:first.h)
+  for span in a:second.h
+    call add(spans, [span[0]+shift, span[1]+shift, span[2]])
+  endfor
+  return {'t': a:first.t.a:second.t, 'h': spans}
+endfunction
+
+"the lines, each a segment, of a:segments, the lines of a template expanded,
+"each a list of segments, as fit a:width cells: segments are put on a line as
+"long as they fit, so a line is only broken where it is permitted
 function s:Wrap(segments, width)
   let lines=[]
   for line in a:segments
-    let current=''
+    let current={'t': '', 'h': []}
     for segment in line
-      if current ==# ''
+      if current.t ==# ''
         let current=segment
-      elseif strdisplaywidth(current)+strdisplaywidth(segment) <= a:width
-        let current.=segment
+      elseif strdisplaywidth(current.t)+strdisplaywidth(segment.t) <= a:width
+        let current=s:Join(current, segment)
       else
         call add(lines, current)
         let current=segment
@@ -830,7 +1056,7 @@ function s:BuildFrame(color, text)
     let need=0
     for line in reg.segments
       for segment in line
-        let need=max([need, strdisplaywidth(segment)])
+        let need=max([need, strdisplaywidth(segment.t)])
       endfor
     endfor
     let grow=need-(reg.x1-reg.x0)
@@ -874,7 +1100,7 @@ function s:BuildFrame(color, text)
     if len(reg.lines) > fit
       let reg.lines=fit > 0 ? reg.lines[:fit-1] : []
       if fit > 0
-        let reg.lines[-1]=s:Ellipsize(reg.lines[-1].'…', reg.x1-reg.x0)
+        let reg.lines[-1]=s:Ellipsis(reg.lines[-1], reg.x1-reg.x0)
       endif
     endif
     let frame.lines=max([frame.lines, reg.ke])
@@ -907,6 +1133,57 @@ function s:AddEmptyCells(rects, line, from, to)
   call add(a:rects, [a:from, a:to, a:line, a:line])
 endfunction
 
+"the swatch colors of the highlight groups that are defined as the color
+"changes, by name: the red, green and blue of the color alone, their inverses
+"(cyan, magenta and yellow, as additive colors) and its alpha as a gray
+let s:dynamic={
+\ 'PastelRed': {c -> [c[0], 0, 0]}, 'PastelGreen': {c -> [0, c[1], 0]},
+\ 'PastelBlue': {c -> [0, 0, c[2]]},
+\ 'PastelCyan': {c -> [0, 255-c[0], 255-c[0]]},
+\ 'PastelMagenta': {c -> [255-c[1], 0, 255-c[1]]},
+\ 'PastelYellow': {c -> [255-c[2], 255-c[2], 0]},
+\ 'PastelAlpha': {c -> repeat([float2nr(round(c[3]*255))], 3)}}
+"the colors the dynamic groups were last defined for, by name
+let s:dynamic_for={}
+
+"define the dynamic highlight group a:name for the color shown: the swatch is
+"its background, and the text black or white, whichever is easier to read
+function s:DefineDynamic(name)
+  let key=join(s:color)
+  if get(s:dynamic_for, a:name, '') ==# key
+    return
+  endif
+  let s:dynamic_for[a:name]=key
+  let swatch=s:dynamic[a:name](s:color)
+  let luma=0.299*swatch[0]+0.587*swatch[1]+0.114*swatch[2]
+  execute 'highlight '.a:name.' guibg='.s:ToHex(swatch)
+\         .' guifg='.(luma < 127.5 ? '#FFFFFF' : '#000000')
+endfunction
+
+"the groups of templates that do not exist, warned about once
+let s:missing={}
+
+"the name of the text property type for text highlighted with a:group, ''
+"being the detail text's own
+function s:PropType(group)
+  if a:group ==# ''
+    return 'pasteldetail'
+  elseif has_key(s:dynamic, a:group)
+    call s:DefineDynamic(a:group)
+  elseif !hlexists(a:group)
+    if !has_key(s:missing, a:group)
+      let s:missing[a:group]=1
+      call s:Warn('pastel: no highlight group '.a:group)
+    endif
+    return 'pasteldetail'
+  endif
+  let type='pasteldetail:'.a:group
+  if empty(prop_type_get(type))
+    call prop_type_add(type, {'highlight': a:group})
+  endif
+  return type
+endfunction
+
 function s:SetPopupContent(popup)
   "what is beyond the screen is never seen, so the work is limited to it, as
   "sizes can be so large that drawing them all would hang Vim
@@ -920,9 +1197,16 @@ function s:SetPopupContent(popup)
     let detail={}
     for reg in s:frame.regions
       if line >= reg.ks && line < reg.ke
-        let chars=split(get(reg.lines, line-reg.ks, ''), '\zs')
+        let shown=get(reg.lines, line-reg.ks, {'t': '', 'h': []})
+        let chars=split(shown.t, '\zs')
+        let groups=repeat([''], len(chars))
+        for span in shown.h
+          for index in range(span[0], span[1]-1)
+            let groups[index]=span[2]
+          endfor
+        endfor
         for x in range(max([0, min([reg.x1, width])-reg.x0]))
-          let detail[reg.x0+x]=get(chars, x, ' ')
+          let detail[reg.x0+x]=[get(chars, x, ' '), get(groups, x, '')]
         endfor
       endif
     endfor
@@ -931,8 +1215,8 @@ function s:SetPopupContent(popup)
     let runstart=0
     for x in range(width)
       if has_key(detail, x)
-        let char=detail[x]
-        let type='pasteldetail'
+        let char=detail[x][0]
+        let type=s:PropType(detail[x][1])
         let blank=0
       else
         let upper=s:Pixel(x, 2*line)
