@@ -585,7 +585,8 @@ call s:Check('local: invalid, global changed', s:ShownWith({'bg_size': 'x'})[3:]
 let s:before=s:Warnings()
 call s:ShownWith({'color_size': 0})
 call s:Check('local: out of range warns', s:Warnings()-s:before, 1)
-call s:Check('local: the warning names the variable', len(filter(split(execute('messages'), "\n"), 'v:val =~# "^pastel: b:pastel_color_size 0 is not"')), 1)
+call s:Check('local: the warning names the variable',
+\            len(filter(split(execute('messages'), "\n"), 'v:val =~# "^pastel: b:pastel_color_size 0 is not"')), 1)
 
 "the filetype lists and the position of the alpha
 call s:Check('local: ignore_filetypes', s:At('#fff', 2, 'css'), [[255, 255, 255, 1000], 0, 4])
@@ -601,12 +602,16 @@ function s:AtWith(text, col, ft, vars)
   return empty(found) ? [] : [s:Thousandths(found[0]), found[1], found[2]]
 endfunction
 call s:Check('local: ignore_filetypes ignores', s:AtWith('#fff', 2, 'css', {'ignore_filetypes': ['css']}), [])
-call s:Check('local: ignore_filetypes can ignore nothing', s:AtWith('#fff', 2, 'sql', {'ignore_filetypes': []}), [[255, 255, 255, 1000], 0, 4])
+call s:Check('local: ignore_filetypes can ignore nothing',
+\            s:AtWith('#fff', 2, 'sql', {'ignore_filetypes': []}), [[255, 255, 255, 1000], 0, 4])
 call s:Check('local: ignore_filetypes does not leak', s:At('#fff', 2, 'sql'), [])
 call s:Check('local: invalid ignore_filetypes', s:AtWith('#fff', 2, 'sql', {'ignore_filetypes': 'css'}), [])
 let g:pastel_alpha_position='last'
-call s:Check('local: alpha_first_filetypes', s:AtWith('#80ff0000', 2, 'css', {'alpha_position': 'auto', 'alpha_first_filetypes': ['css']}), [[255, 0, 0, 502], 0, 9])
-call s:Check('local: alpha_position', s:AtWith('#80ff0000', 2, 'css', {'alpha_position': 'first'}), [[255, 0, 0, 502], 0, 9])
+call s:Check('local: alpha_first_filetypes',
+\            s:AtWith('#80ff0000', 2, 'css', {'alpha_position': 'auto', 'alpha_first_filetypes': ['css']}),
+\            [[255, 0, 0, 502], 0, 9])
+call s:Check('local: alpha_position',
+\            s:AtWith('#80ff0000', 2, 'css', {'alpha_position': 'first'}), [[255, 0, 0, 502], 0, 9])
 let g:pastel_alpha_position='auto'
 
 "the timer interval: 0 turns alternating off in that buffer only
@@ -624,7 +629,8 @@ let g:pastel_color_mode='k'
 
 "the layout and the colors are not overridden, nor warned about
 let s:before=s:Warnings()
-let s:shown=s:ShownWith({'color_mode': 'w|w', 'black_bg': '#123456', 'white_bg': '#123456', 'trans_fg': '#123456', 'trans_bg': '#123456'})
+let s:shown=s:ShownWith({'color_mode': 'w|w', 'black_bg': '#123456', 'white_bg': '#123456',
+\                        'trans_fg': '#123456', 'trans_bg': '#123456'})
 call s:Check('local: layout not overridden', s:shown[3:], s:global[3:])
 call s:Check('local: layout and colors raise nothing', s:shown[0], '')
 call s:Check('local: black not overridden', s:Attr('pastelpkk', 'bg#'), '#000000')
@@ -636,7 +642,7 @@ call s:Check('local: no warnings from them', s:Warnings(), s:before)
 function s:Ex(template, color, ...)
   let text=a:0 >= 1 ? a:1 : ''
   let lines=s:Fn('Expand')(a:template, a:color, text, a:0 >= 2 ? a:2 : 1)
-  return map(lines, 'join(v:val, "~")')
+  return map(lines, 'join(map(copy(v:val), "v:val.t"), "~")')
 endfunction
 let s:dark=[127, 0, 0, 1.0]
 let s:rgb=[255, 136, 0, 1.0]
@@ -689,14 +695,13 @@ call s:Check('template: percent at the end', s:Why('a%'), 'a % at the end, write
 call s:Check('template: unclosed brace', s:Why('%{r'), 'a %{ without a }')
 call s:Check('template: reserved letter', s:Why('%q'), '%q is reserved')
 call s:Check('template: reserved capital', s:Why('%R'), '%R is reserved')
-call s:Check('template: reserved symbol', s:Why('%#Group#'), '%# is unsupported')
-call s:Check('template: reserved group', s:Why('%('), '%( is unsupported')
-call s:Check('template: reserved reset', s:Why('%*'), '%* is unsupported')
 call s:Check('template: not known symbol', s:Why('%!'), '%! is not known')
 call s:Check('template: digit', s:Why('%1'), '%1 is not known')
 call s:Check('template: space', s:Why('% x'), '%  is not known')
-call s:Check('template: later name', s:Why('%{hsl}'), '%{hsl} is unsupported')
-call s:Check('template: later component', s:Why('%{hsl.s}'), '%{hsl.s} is unsupported')
+call s:Check('template: later name', s:Why('%{hsla}'), '%{hsla} is unsupported')
+call s:Check('template: later model', s:Why('%{lab}'), '%{lab} is unsupported')
+call s:Check('template: later component', s:Why('%{lab.l}'), '%{lab.l} is unsupported')
+call s:Check('template: later names, cmy', s:Why('%{cmy}'), '%{cmy} is unsupported')
 call s:Check('template: later color space', s:Why('%{oklch.c}'), '%{oklch.c} is unsupported')
 call s:Check('template: braced letter', s:Why('%{s}'), '%s is reserved')
 call s:Check('template: braced capital', s:Why('%{L}'), '%L is reserved')
@@ -733,6 +738,164 @@ for s:letter in split('rgbaxXtnN', '\zs')
   endif
 endfor
 call s:Check('template: the letters in use are valid', s:letters, [])
+
+"the models: whole, and by value, of some colors; the conversions are checked
+"by the notations that are known to be right for them
+let s:orange=[255, 136, 0, 1.0]
+call s:Check('model: rgb', s:Ex('%{rgb}', s:orange), ['rgb(255 136 0)'])
+call s:Check('model: hsl', s:Ex('%{hsl}', s:orange), ['hsl(32 100% 50%)'])
+call s:Check('model: hsv', s:Ex('%{hsv}', s:orange), ['hsv(32 100% 100%)'])
+call s:Check('model: hwb', s:Ex('%{hwb}', s:orange), ['hwb(32 0% 0%)'])
+call s:Check('model: cmyk', s:Ex('%{cmyk}', s:orange), ['cmyk(0% 47% 100% 0%)'])
+call s:Check('model: black',
+\            s:Ex('%{hsl} %{hsv} %{hwb} %{cmyk}', [0, 0, 0, 1.0]),
+\            ['hsl(0 0% 0%) hsv(0 0% 0%) hwb(0 0% 100%) cmyk(0% 0% 0% 100%)'])
+call s:Check('model: white',
+\            s:Ex('%{hsl} %{hsv} %{hwb} %{cmyk}', [255, 255, 255, 1.0]),
+\            ['hsl(0 0% 100%) hsv(0 0% 100%) hwb(0 100% 0%) cmyk(0% 0% 0% 0%)'])
+call s:Check('model: gray',
+\            s:Ex('%{hsl} %{hsv} %{hwb}', [128, 128, 128, 1.0]), ['hsl(0 0% 50%) hsv(0 0% 50%) hwb(0 50% 50%)'])
+call s:Check('model: red', s:Ex('%{hsl.h} %{hsv.s} %{cmyk.c} %{cmyk.m}', [255, 0, 0, 1.0]), ['0 100% 0% 100%'])
+call s:Check('model: green', s:Ex('%{hsl.h}', [0, 255, 0, 1.0]), ['120'])
+call s:Check('model: blue', s:Ex('%{hsl.h}', [0, 0, 255, 1.0]), ['240'])
+call s:Check('model: rose', s:Ex('%{hsl.h}', [255, 0, 128, 1.0]), ['330'])
+call s:Check('model: a hue before red', s:Ex('%{hsl.h}', [255, 0, 1, 1.0]), ['360'])
+call s:Check('model: lightness and saturation', s:Ex('%{hsl.s}/%{hsl.l}', [10, 200, 90, 1.0]), ['90%/41%'])
+call s:Check('model: dark', s:Ex('%{hsv.v}', [127, 0, 0, 1.0]), ['50%'])
+call s:Check('model: value by value', s:Ex('%{hwb.w} %{hwb.b}', s:orange), ['0% 0%'])
+call s:Check('model: cmyk by value', s:Ex('%{cmyk.m} %{cmyk.k}', s:orange), ['47% 0%'])
+call s:Check('model: a value of rgb is plain', s:Ex('%{rgb.r} %{rgb.g} %{rgb.b}', s:orange), ['255 136 0'])
+call s:Check('model: a value of rgb with a modifier', s:Ex('%{rgb.g:p}', s:orange), ['53%'])
+call s:Check('model: alpha', s:Ex('%{hsl}', [255, 136, 0, 0.8]), ['hsl(32 100% 50% / 0.8)'])
+call s:Check('model: forced alpha', s:Ex('%{hsl:a}', s:orange), ['hsl(32 100% 50% / 1)'])
+call s:Check('model: comma', s:Ex('%{hsl:c}', s:orange), ['hsl(32, 100%, 50%)'])
+call s:Check('model: comma, alpha', s:Ex('%{hsl:c}', [255, 136, 0, 0.8]), ['hsla(32, 100%, 50%, 0.8)'])
+call s:Check('model: comma, forced alpha', s:Ex('%{hsl:a:c}', s:orange), ['hsla(32, 100%, 50%, 1)'])
+call s:Check('model: comma, rgb', s:Ex('%{rgb:c}', [255, 136, 0, 0.5]), ['rgba(255, 136, 0, 0.5)'])
+call s:Check('model: comma, hsv', s:Ex('%{hsv:c}', [255, 136, 0, 0.5]), ['hsva(32, 100%, 100%, 0.5)'])
+call s:Check('model: comma, cmyk', s:Ex('%{cmyk:c}', s:orange), ['cmyk(0%, 47%, 100%, 0%)'])
+call s:Check('model: precision', s:Ex('%{hsl:.2}', [255, 136, 0, 0.8]), ['hsl(32.00 100.00% 50.00% / 0.80)'])
+call s:Check('model: precision, rounding', s:Ex('%{hsl:.1}', [10, 200, 90, 1.0]), ['hsl(145.3 90.5% 41.2%)'])
+call s:Check('model: default precision rounds', s:Ex('%{hsl}', [10, 200, 90, 1.0]), ['hsl(145 90% 41%)'])
+call s:Check('model: hue precision', s:Ex('%{hsl.h:.2}', [10, 200, 90, 1.0]), ['145.26'])
+call s:Check('model: hue as a turn', s:Ex('%{hsl.h:f:.3}', s:orange), ['0.089'])
+call s:Check('model: whole percent', s:Ex('%{hsl.s:P}', s:orange), ['100'])
+call s:Check('model: a fraction', s:Ex('%{hsl.l:f}', s:orange), ['0.5'])
+call s:Check('model: with text', s:Ex('<%{hsl.h}deg>', s:orange), ['<32deg>'])
+
+"what a model is shown as is read back by the plugin's own parsers: with enough
+"decimals it is the same color, with none, which is the default, it is close
+let s:Parse=s:Fn('ParseCss')
+let s:seed=12345
+function s:Random(n)
+  let s:seed=(s:seed*1103515245+12345) % 2147483648
+  return (s:seed / 65536) % a:n
+endfunction
+let s:samples=[[0, 0, 0, 1.0], [255, 255, 255, 1.0], [255, 0, 0, 1.0], [0, 255, 0, 1.0], [0, 0, 255, 1.0],
+\              [128, 128, 128, 1.0], [255, 136, 0, 1.0]]
+for s:n in range(150)
+  call add(s:samples, [s:Random(256), s:Random(256), s:Random(256), 1.0])
+endfor
+for s:n in range(50)
+  call add(s:samples, [s:Random(256), s:Random(256), s:Random(256), (1+s:Random(99))/100.0])
+endfor
+function s:RoundTrip(template, tolerance)
+  let worse=[]
+  for color in s:samples
+    let back=s:Parse(join(map(s:Fn('Expand')(a:template, color, '', 1)[0], 'v:val.t'), ''))
+    let errors=empty(back) ? [999] : [abs(back[0]-color[0]), abs(back[1]-color[1]), abs(back[2]-color[2]),
+\                                      abs(back[3]-color[3])*100]
+    if max(errors) > a:tolerance
+      call add(worse, [color, back])
+    endif
+  endfor
+  return len(worse) > 0 ? worse[0] : []
+endfunction
+for s:model in ['%{rgb}', '%{rgb:c}', '%{hsl:.3}', '%{hsl:c:.3}', '%{hwb:.3}', '%{hsv:.3}', '%{hsv:c:.3}',
+\               '%{hsl:a:.3}']
+  call s:Check('round trip: '.s:model, s:RoundTrip(s:model, 0.5), [])
+endfor
+for s:model in ['%{hsl}', '%{hsl:c}', '%{hwb}', '%{hsv}']
+  call s:Check('round trip, close: '.s:model, s:RoundTrip(s:model, 4), [])
+endfor
+call s:Check('round trip is not trivial', s:RoundTrip('%{hsl}', 0.5) != [], 1)
+
+"groups of items: left out if an item in them is empty
+call s:Check('group: kept', s:Ex('a%( / %a:o%)b', [1, 2, 3, 0.5]), ['a / 0.5b'])
+call s:Check('group: left out', s:Ex('a%( / %a:o%)b', s:orange), ['ab'])
+call s:Check('group: with text only', s:Ex('a%( x %)b', s:orange), ['a x b'])
+call s:Check('group: an empty source text', s:Ex('a%(%t%)b', s:orange, ''), ['ab'])
+call s:Check('group: a source text', s:Ex('a%(<%t>%)b', s:orange, 'x'), ['a<x>b'])
+call s:Check('group: with a model', s:Ex('%(%{hsl}%)', s:orange), ['hsl(32 100% 50%)'])
+call s:Check('group: two', s:Ex('%(%a:o%)%( %a:p%)', [1, 2, 3, 0.5]), ['0.5 50%'])
+call s:Check('group: empty', s:Ex('a%(%)b', s:orange), ['ab'])
+call s:Check('group: a percent in it', s:Ex('%(100%%%)', s:orange), ['100%'])
+call s:Check('group: with a line break is not valid', s:Why('%(a%nb%)'), '%n is not allowed in %( %)')
+call s:Check('group: with a soft break is not valid', s:Why('%(a%Nb%)'), '%N is not allowed in %( %)')
+call s:Check('group: with a highlight is not valid', s:Why('%(%#Error#a%)'), '%# is not allowed in %( %)')
+call s:Check('group: with a reset is not valid', s:Why('%(%*%)'), '%* is not allowed in %( %)')
+call s:Check('group: in a group is not valid', s:Why('%(%(%)%)'), '%( is not allowed in %( %)')
+call s:Check('group: not closed', s:Why('%(a'), 'a %( without a %)')
+call s:Check('group: not opened', s:Why('a%)'), '%) without a %(')
+call s:Check('group: items are validated', s:Why('%(%q%)'), '%q is reserved')
+call s:Check('group: valid', s:Why('%(%{hsl:c}%)'), '')
+
+"more of the validation
+call s:Check('model: comma in hwb', s:Why('%{hwb:c}'), '%{hwb}: modifier not allowed')
+call s:Check('model: precision in rgb', s:Why('%{rgb:.1}'), '%{rgb}: modifier not allowed')
+call s:Check('model: a format of a whole', s:Why('%{hsl:p}'), '%{hsl}: modifier not allowed')
+call s:Check('model: omitting a whole', s:Why('%{hsl:o}'), '%{hsl}: modifier not allowed')
+call s:Check('model: a percent of a hue', s:Why('%{hsl.h:p}'), '%{hsl.h}: modifier not allowed')
+call s:Check('model: a hex of a value', s:Why('%{hsl.s:x}'), '%{hsl.s}: modifier not allowed')
+call s:Check('model: omitting a value', s:Why('%{hsl.s:o}'), '%{hsl.s}: modifier not allowed')
+call s:Check('model: comma of a value', s:Why('%{hsl.s:c}'), '%{hsl.s}: modifier not allowed')
+call s:Check('model: not a value', s:Why('%{hsl.q}'), '%{hsl.q} is not known')
+call s:Check('model: not a model', s:Why('%{foo.r}'), '%{foo.r} is not known')
+call s:Check('model: an upper case model', s:Why('%{HSL}'), '%{HSL} is not known')
+call s:Check('model: the same value in another model', s:Why('%{hwb.b} %{hsv.v} %{cmyk.k}'), '')
+call s:Check('model: comma is not a modifier of the rest', s:Why('%r:c'), '%r: modifier not allowed')
+call s:Check('model: comma is for models', s:Why('%x:c'), '%x: modifier not allowed')
+call s:Check('highlight: a group', s:Why('%#Error#x%*'), '')
+call s:Check('highlight: a group with a dot and an at', s:Why('%#@.a-b_1#x'), '')
+call s:Check('highlight: no name', s:Why('%##x'), '%# needs a group name and a closing #')
+call s:Check('highlight: not closed', s:Why('%#Error'), '%# needs a group name and a closing #')
+call s:Check('highlight: a space', s:Why('%#a b#'), '%# needs a group name and a closing #')
+
+"highlights: the parts of the text that have one, as [first, after the last,
+"group] of the segments of the lines
+function s:Spans(template, ...)
+  let lines=s:Fn('Expand')(a:template, a:0 >= 1 ? a:1 : s:orange, 'SRC', 1)
+  return map(lines, 'map(copy(v:val), "[v:val.t, v:val.h]")')
+endfunction
+call s:Check('highlight: none', s:Spans('abc'), [[['abc', []]]])
+call s:Check('highlight: a span', s:Spans('a%#Error#bc%*d'), [[['abcd', [[1, 3, 'Error']]]]])
+call s:Check('highlight: to the end', s:Spans('a%#Error#bc'), [[['abc', [[1, 3, 'Error']]]]])
+call s:Check('highlight: two', s:Spans('%#A#a%#B#b'), [[['ab', [[0, 1, 'A'], [1, 2, 'B']]]]])
+call s:Check('highlight: the same one is one span', s:Spans('%#A#a%#A#b'), [[['ab', [[0, 2, 'A']]]]])
+call s:Check('highlight: items in it', s:Spans('%#A#%r %g%*'), [[['255 136', [[0, 7, 'A']]]]])
+call s:Check('highlight: an empty item in it', s:Spans('x%#A#%a:o%*y'), [[['xy', []]]])
+call s:Check('highlight: across a line break', s:Spans('%#A#a%nb'), [[['a', [[0, 1, 'A']]]], [['b', [[0, 1, 'A']]]]])
+call s:Check('highlight: across a soft break', s:Spans('%#A#a%Nb'), [[['a', [[0, 1, 'A']]], ['b', [[0, 1, 'A']]]]])
+call s:Check('highlight: reset', s:Spans('%#A#a%*%nb'), [[['a', [[0, 1, 'A']]]], [['b', []]]])
+call s:Check('highlight: multibyte text', s:Spans('%#A#é%*ü%#B#ö'), [[['éüö', [[0, 1, 'A'], [2, 3, 'B']]]]])
+call s:Check('highlight: a group of items', s:Spans('%#A#%(<%t>%)%*'), [[['<SRC>', [[0, 5, 'A']]]]])
+
+"cutting and joining keep the highlights
+let s:Wrap=s:Fn('Wrap')
+function s:Wrapped(template, width)
+  let lines=s:Wrap(s:Fn('Expand')(a:template, s:orange, 'SRC', 1), a:width)
+  return map(lines, '[v:val.t, v:val.h]')
+endfunction
+call s:Check('wrap: joined with the highlights moved',
+\            s:Wrapped('%#A#ab%N%*cd%N%#B#ef', 6), [['abcdef', [[0, 2, 'A'], [4, 6, 'B']]]])
+call s:Check('wrap: broken', s:Wrapped('%#A#ab%N%*cd%N%#B#ef', 4), [['abcd', [[0, 2, 'A']]], ['ef', [[0, 2, 'B']]]])
+call s:Check('wrap: cut with an ellipsis in the highlight', s:Wrapped('%#A#abcdef', 4), [['abc…', [[0, 4, 'A']]]])
+call s:Check('wrap: cut, the highlight of what it follows', s:Wrapped('ab%#A#cdef', 4), [['abc…', [[2, 4, 'A']]]])
+call s:Check('wrap: cut before the highlight', s:Wrapped('abcdef%#A#gh', 4), [['abc…', []]])
+call s:Check('wrap: cut in the middle of one', s:Wrapped('%#A#ab%#B#cdef', 4), [['abc…', [[0, 2, 'A'], [2, 4, 'B']]]])
+call s:Check('wrap: not cut', s:Wrapped('%#A#ab', 4), [['ab', [[0, 2, 'A']]]])
+call s:Check('wrap: nothing fits', s:Wrapped('%#A#ab', 0), [['', []]])
+call s:Check('wrap: one cell', s:Wrapped('%#A#ab', 1), [['…', []]])
 
 "layouts: the rows, and the regions as [first row, first column, last row,
 "last column]; empty if the layout is not valid
@@ -794,7 +957,8 @@ function s:Rendered(mode, format, code)
   return map(lines, 'substitute(substitute(v:val, "▀", "H", "g"), " ", ".", "g")')
 endfunction
 let s:blank10=repeat('.', 10)
-call s:Check('detail: alone', s:Rendered('d', '%x', '#ff8800'), ['#ff8800...', s:blank10, s:blank10, s:blank10, s:blank10])
+call s:Check('detail: alone',
+\            s:Rendered('d', '%x', '#ff8800'), ['#ff8800...', s:blank10, s:blank10, s:blank10, s:blank10])
 call s:Check('detail: the default format', s:Rendered('d', '%x', '#ff8800')[0], '#ff8800...')
 call s:Check('detail: popup size', [popup_getpos(popup_list()[0]).width, popup_getpos(popup_list()[0]).height], [10, 5])
 call s:Check('detail: rgb grows to the right', s:Rendered('d', 'rgb(%r %g %b)', '#ff8800'),
@@ -805,45 +969,75 @@ call s:Check('detail: broken where permitted', s:Rendered('d', 'rgb(%N%r %N%g %N
 call s:Check('detail: lines', s:Rendered('d', '%x%n%r:p %g:p %b:p%nsrc %t', 'rgb(255 136 0)'),
 \            ['#ff8800...........', '100%.53%.0%.......', 'src.rgb(255.136.0)', repeat('.', 18), repeat('.', 18)])
 call s:Check('detail: under a block', s:Rendered('t|d', '%x', '#ff8800'),
-\            ['HHHHHHHHHH', 'HH......HH', 'HH......HH', 'HH......HH', 'HHHHHHHHHH', '#ff8800...'] + repeat([s:blank10], 4))
+\            ['HHHHHHHHHH', 'HH......HH', 'HH......HH', 'HH......HH', 'HHHHHHHHHH', '#ff8800...']
+\            + repeat([s:blank10], 4))
 call s:Check('detail: next to a block', s:Rendered('td', '%x', '#ff8800cc')[0], 'HHHHHHHHHH#ff8800cc.')
-call s:Check('detail: two regions, the second is named', s:Rendered('td|d', '%x', '#ff8800')[5:6], ['Region.2............', '#ff8800.............'])
-call s:Check('detail: two regions, a list', s:Rendered('td|d.d', ['A%n%x', 'B', 'C'], '#ff8800')[0:1], ['HHHHHHHHHHA.........', 'HH......HH#ff8800...'])
-call s:Check('detail: two regions, the second of a list', s:Rendered('td|d.d', ['A%n%x', 'B', 'C'], '#ff8800')[5], 'B...................')
-call s:Check('detail: separated regions', s:Rendered('td|.|dd', ['one', 'two'], '#ff8800')[0] . '/' . s:Rendered('td|.|dd', ['one', 'two'], '#ff8800')[5], 'HHHHHHHHHHone......./two.................')
-call s:Check('detail: a short list names the rest', s:Rendered('d.d.d', ['x'], '#ff8800')[0], 'x.........Region.2..Region.3..')
+call s:Check('detail: two regions, the second is named',
+\            s:Rendered('td|d', '%x', '#ff8800')[5:6], ['Region.2............', '#ff8800.............'])
+call s:Check('detail: two regions, a list',
+\            s:Rendered('td|d.d', ['A%n%x', 'B', 'C'], '#ff8800')[0:1],
+\            ['HHHHHHHHHHA.........', 'HH......HH#ff8800...'])
+call s:Check('detail: two regions, the second of a list',
+\            s:Rendered('td|d.d', ['A%n%x', 'B', 'C'], '#ff8800')[5], 'B...................')
+call s:Check('detail: separated regions',
+\            s:Rendered('td|.|dd', ['one', 'two'], '#ff8800')[0] . '/'
+\            . s:Rendered('td|.|dd', ['one', 'two'], '#ff8800')[5],
+\            'HHHHHHHHHHone......./two.................')
+call s:Check('detail: a short list names the rest',
+\            s:Rendered('d.d.d', ['x'], '#ff8800')[0], 'x.........Region.2..Region.3..')
 call s:Check('detail: a list of nothing names all', s:Rendered('d', [], '#ff8800')[0], 'Region.1..')
 call s:Check('detail: a long list is not a problem', s:Rendered('d', ['a', 'b'], '#ff8800')[0], 'a.........')
 
 "growth: to the right before down, only into what is free, else cut
-call s:Check('growth: both want the cell, the right one has it', s:Rendered('td|d', ['1%n2%n3%n4%n5%n6%n7%n8', 'wide-wide-wide-wide-wide'], '#ff8800')[0:5],
-\            ['HHHHHHHHHH1.............', 'HH......HH2.............', 'HH......HH3.............', 'HH......HH4.............', 'HHHHHHHHHH5…............', 'wide-wide-wide-wide-wide'])
+call s:Check('growth: both want the cell, the right one has it',
+\            s:Rendered('td|d', ['1%n2%n3%n4%n5%n6%n7%n8', 'wide-wide-wide-wide-wide'], '#ff8800')[0:5],
+\            ['HHHHHHHHHH1.............', 'HH......HH2.............', 'HH......HH3.............',
+\             'HH......HH4.............', 'HHHHHHHHHH5…............', 'wide-wide-wide-wide-wide'])
 let s:tall='1%n2%n3%n4%n5%n6%n7%n8'
 call s:Check('growth: free down in a ragged layout', s:Rendered('td|k', [s:tall], '#ff8800')[0:7],
 \            ['HHHHHHHHHH1.........', 'HH......HH2.........', 'HH......HH3.........', 'HH......HH4.........',
 \             'HHHHHHHHHH5.........', '..........6.........', '..........7.........', '..........8.........'])
 call s:Check('growth: a row of . stops it', s:Rendered('td|.|k', [s:tall], '#ff8800')[4], 'HHHHHHHHHH5…........')
 call s:Check('growth: a row of . stops it, the size', popup_getpos(popup_list()[0]).height, 10)
-call s:Check('growth: a . stops it to the right', s:Rendered('d.', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghi…')
-call s:Check('growth: without the . it does not', s:Rendered('d', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghijklmnopqrstuvwxyz')
-call s:Check('growth: a . elsewhere does not', s:Rendered('.d', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghijklmnopqrstuvwxyz')
-call s:Check('growth: the claim of the one above is cancelled', s:Rendered('td|.|d', [s:tall, 'wide-wide-wide-wide-wide'], '#ff8800')[4:5],
+call s:Check('growth: a . stops it to the right',
+\            s:Rendered('d.', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghi…')
+call s:Check('growth: without the . it does not',
+\            s:Rendered('d', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghijklmnopqrstuvwxyz')
+call s:Check('growth: a . elsewhere does not',
+\            s:Rendered('.d', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghijklmnopqrstuvwxyz')
+call s:Check('growth: the claim of the one above is cancelled',
+\            s:Rendered('td|.|d', [s:tall, 'wide-wide-wide-wide-wide'], '#ff8800')[4:5],
 \            ['HHHHHHHHHH5…............', 'wide-wide-wide-wide-wide'])
-call s:Check('growth: blocked to the right, cut', s:Rendered('dk', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghi…..........')
-call s:Check('growth: free to the right', s:Rendered('kd', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], '..........abcdefghijklmnopqrstuvwxyz')
-call s:Check('growth: blocked down, cut', s:Rendered('d|k', '1%n2%n3%n4%n5%n6%n7%n8', '#ff8800')[0:5], ['1.........', '2.........', '3.........', '4.........', '5…........', s:blank10])
-call s:Check('growth: free down', s:Rendered('k|d', '1%n2%n3%n4%n5%n6%n7%n8', '#ff8800')[5:12], ['1.........', '2.........', '3.........', '4.........', '5.........', '6.........', '7.........', '8.........'])
-call s:Check('growth: free down, the size', [popup_getpos(popup_list()[0]).width, popup_getpos(popup_list()[0]).height], [10, 13])
-call s:Check('growth: breaking instead', s:Rendered('kd|dk', ['a%Nb%Nc', 'x%Ny%Nz'], '#ff8800')[0] . s:Rendered('kd|dk', ['a%Nb%Nc', 'x%Ny%Nz'], '#ff8800')[5], '..........abc.......xyz.................')
+call s:Check('growth: blocked to the right, cut',
+\            s:Rendered('dk', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghi…..........')
+call s:Check('growth: free to the right',
+\            s:Rendered('kd', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], '..........abcdefghijklmnopqrstuvwxyz')
+call s:Check('growth: blocked down, cut',
+\            s:Rendered('d|k', '1%n2%n3%n4%n5%n6%n7%n8', '#ff8800')[0:5],
+\            ['1.........', '2.........', '3.........', '4.........', '5…........', s:blank10])
+call s:Check('growth: free down',
+\            s:Rendered('k|d', '1%n2%n3%n4%n5%n6%n7%n8', '#ff8800')[5:12],
+\            ['1.........', '2.........', '3.........', '4.........', '5.........', '6.........', '7.........',
+\             '8.........'])
+call s:Check('growth: free down, the size',
+\            [popup_getpos(popup_list()[0]).width, popup_getpos(popup_list()[0]).height], [10, 13])
+call s:Check('growth: breaking instead',
+\            s:Rendered('kd|dk', ['a%Nb%Nc', 'x%Ny%Nz'], '#ff8800')[0]
+\            . s:Rendered('kd|dk', ['a%Nb%Nc', 'x%Ny%Nz'], '#ff8800')[5],
+\            '..........abc.......xyz.................')
 call s:Check('growth: wider than the layout', popup_getpos(popup_list()[0]).width, 20)
 
 "odd sizes: a region has the lines that are whole in it, and at the bottom also
 "the one the padding of the odd height completes
 let g:pastel_color_size=3
 let g:pastel_bg_size=1
-call s:Check('odd: popup size', [s:Rendered('d', 'a%nb%nc', '#ff8800')[0], popup_getpos(popup_list()[0]).width, popup_getpos(popup_list()[0]).height], ['a....', 5, 3])
+call s:Check('odd: popup size',
+\            [s:Rendered('d', 'a%nb%nc', '#ff8800')[0], popup_getpos(popup_list()[0]).width,
+\             popup_getpos(popup_list()[0]).height],
+\            ['a....', 5, 3])
 call s:Check('odd: the lines at the bottom', s:Rendered('d', 'a%nb%nc', '#ff8800'), ['a....', 'b....', 'c....'])
-call s:Check('odd: the shared line is not for the text', s:Rendered('d|k', 'a%nb%nc', '#ff8800')[0:2], ['a....', 'b…...', 'HHHHH'])
+call s:Check('odd: the shared line is not for the text',
+\            s:Rendered('d|k', 'a%nb%nc', '#ff8800')[0:2], ['a....', 'b…...', 'HHHHH'])
 let g:pastel_color_size=6
 let g:pastel_bg_size=2
 
@@ -859,16 +1053,88 @@ call s:Rendered('kd', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')
 call s:Check('pixels: grown region', s:Pixel(35, 4), 'e')
 call s:Check('pixels: not grown further', s:Pixel(36, 4), 'n')
 let s:popup=popup_list()[0]
-call s:Check('detail text has its own highlight', map(prop_list(1, {'bufnr': winbufnr(s:popup)}), 'v:val.type'), ['pastelpkk', 'pasteldetail'])
+call s:Check('detail text has its own highlight',
+\            map(prop_list(1, {'bufnr': winbufnr(s:popup)}), 'v:val.type'), ['pastelpkk', 'pasteldetail'])
 call s:Check('detail highlight exists', hlexists('PastelDetail'), 1)
 call s:Check('detail highlight is linked to Normal', synIDattr(synIDtrans(hlID('PastelDetail')), 'name'), 'Normal')
 call s:Check('detail property type exists', !empty(prop_type_get('pasteldetail')), 1)
+
+"highlighted text has its own property types, as a user's groups are used as
+"they are, and a group that does not exist is warned about once
+function s:Props(mode, format, code)
+  call s:Rendered(a:mode, a:format, a:code)
+  let buf=winbufnr(popup_list()[0])
+  return map(prop_list(1, {'bufnr': buf}), '[v:val.type, v:val.col, v:val.length]')
+endfunction
+call s:Check('highlight: the properties',
+\            s:Props('d', '%#ErrorMsg#ab%*cd', '#ff8800'), [['pasteldetail:ErrorMsg', 1, 2], ['pasteldetail', 3, 8]])
+call s:Check('highlight: the text', s:Rendered('d', '%#ErrorMsg#ab%*cd', '#ff8800')[0], 'abcd......')
+call s:Check('highlight: two groups',
+\            s:Props('d', '%#ErrorMsg#a%#WarningMsg#b', '#ff8800'),
+\            [['pasteldetail:ErrorMsg', 1, 1], ['pasteldetail:WarningMsg', 2, 1], ['pasteldetail', 3, 8]])
+call s:Check('highlight: multibyte text',
+\            s:Props('d', '%#ErrorMsg#é%*x', '#ff8800'), [['pasteldetail:ErrorMsg', 1, 2], ['pasteldetail', 3, 9]])
+call s:Check('highlight: cut with an ellipsis',
+\            s:Props('dk', '%#ErrorMsg#abcdefghijklmnop', '#ff8800'),
+\            [['pasteldetail:ErrorMsg', 1, 12], ['pastelpkk', 13, 10]])
+call s:Check('highlight: its property type exists', !empty(prop_type_get('pasteldetail:ErrorMsg')), 1)
+call s:Check('highlight: the type uses the group', prop_type_get('pasteldetail:ErrorMsg').highlight, 'ErrorMsg')
+let s:before=len(filter(split(execute('messages'), "\n"), 'v:val =~# "^pastel: no highlight group NoSuchGroupX"'))
+call s:Check('highlight: a missing group is the detail one',
+\            s:Props('d', '%#NoSuchGroupX#ab', '#ff8800')[0], ['pasteldetail', 1, 10])
+call s:Rendered('d', '%#NoSuchGroupX#ab', '#ff8800')
+call s:Check('highlight: a missing group is warned about once',
+\            len(filter(split(execute('messages'), "\n"),
+\                       'v:val =~# "^pastel: no highlight group NoSuchGroupX"'))-s:before,
+\            1)
+highlight NoSuchGroupX guifg=#123456
+call s:Check('highlight: a group that is defined later is used',
+\            s:Props('d', '%#NoSuchGroupX#ab', '#ff8800')[0], ['pasteldetail:NoSuchGroupX', 1, 2])
+
+"the groups of the red, green and blue, their inverses and the alpha are
+"defined as the color changes, if a template uses them: the color's value of
+"it as the background, and black or white text, whichever is easier to read
+let s:swatches=['PastelRed', 'PastelGreen', 'PastelBlue', 'PastelCyan', 'PastelMagenta', 'PastelYellow', 'PastelAlpha']
+let s:all=join(map(copy(s:swatches), '"%#".v:val."#x"'), '')
+function s:Swatches()
+  return map(copy(s:swatches), '[s:Attr(v:val, "bg#"), s:Attr(v:val, "fg#")]')
+endfunction
+for s:group in s:swatches
+  execute 'highlight clear' s:group
+endfor
+call s:Rendered('d', '%#PastelRed#x', '#ff8800cc')
+call s:Check('swatches: the ones not used are not defined',
+\            [s:Attr('PastelGreen', 'bg#'), s:Attr('PastelMagenta', 'bg#')], ['', ''])
+call s:Check('swatches: the one used is', s:Attr('PastelRed', 'bg#'), '#ff0000')
+call s:Rendered('d', s:all, '#ff8800cc')
+call s:Check('swatches: all of an orange, half transparent', s:Swatches(),
+\            [['#ff0000', '#ffffff'], ['#008800', '#ffffff'], ['#000000', '#ffffff'], ['#000000', '#ffffff'],
+\             ['#770077', '#ffffff'], ['#ffff00', '#000000'], ['#cccccc', '#000000']])
+call s:Rendered('d', s:all, '#0000ff')
+call s:Check('swatches: they follow the color', s:Swatches(),
+\            [['#000000', '#ffffff'], ['#000000', '#ffffff'], ['#0000ff', '#ffffff'], ['#00ffff', '#000000'],
+\             ['#ff00ff', '#ffffff'], ['#000000', '#ffffff'], ['#ffffff', '#000000']])
+call s:Rendered('d', s:all, '#00ff00')
+call s:Check('swatches: a green one gets black text',
+\            [s:Attr('PastelGreen', 'bg#'), s:Attr('PastelGreen', 'fg#')], ['#00ff00', '#000000'])
+call s:Rendered('d', s:all, '#808080')
+call s:Check('swatches: gray',
+\            s:Swatches()[0:2], [['#800000', '#ffffff'], ['#008000', '#ffffff'], ['#000080', '#ffffff']])
+execute 'highlight clear PastelRed'
+call s:Rendered('d', '%#PastelRed#x', '#808080')
+call s:Check('swatches: the same color does not redefine', s:Attr('PastelRed', 'bg#'), '')
+doautocmd ColorScheme
+call s:Rendered('d', '%#PastelRed#x', '#808080')
+call s:Check('swatches: a color scheme does', s:Attr('PastelRed', 'bg#'), '#800000')
+call s:Check('swatches: the properties of them',
+\            s:Props('d', '%#PastelRed#a%#PastelAlpha#b', '#808080'),
+\            [['pasteldetail:PastelRed', 1, 1], ['pasteldetail:PastelAlpha', 2, 1], ['pasteldetail', 3, 8]])
 
 "the detail format is an option: invalid values warn and the default is used,
 "it is overridden per buffer, and a string is for the first region only
 let g:pastel_color_mode='d'
 let g:pastel_detail_format='%x'
-for s:value in ['%q', '%', 5, {}, [5], ['%x', '%q'], '%{hsl}', '%r:q', '%t:p', '%{r']
+for s:value in ['%q', '%', 5, {}, [5], ['%x', '%q'], '%{lab.l}', '%r:q', '%t:p', '%{r', '%#', '%(%n%)', '%{hwb:c}']
   let s:before=s:Warnings()
   let g:pastel_detail_format=s:value
   let s:shown=s:Rendered('d', s:value, '#ff8800')
@@ -876,7 +1142,10 @@ for s:value in ['%q', '%', 5, {}, [5], ['%x', '%q'], '%{hsl}', '%r:q', '%t:p', '
   call s:Check('format '.string(s:value).': a warning', s:Warnings()-s:before, 1)
 endfor
 let g:pastel_detail_format='%x'
-call s:Check('format: the reason is in the warning', len(filter(split(execute('messages'), "\n"), 'v:val =~# "^pastel: g:pastel_detail_format: %t: modifier not allowed$"')), 1)
+call s:Check('format: the reason is in the warning',
+\            len(filter(split(execute('messages'), "\n"),
+\                       'v:val =~# "^pastel: g:pastel_detail_format: %t: modifier not allowed$"')),
+\            1)
 let s:before=s:Warnings()
 call s:Check('format: valid list', s:Rendered('d', ['%r'], '#ff8800')[0], '255.......')
 call s:Check('format: no warning for valid values', s:Warnings(), s:before)
