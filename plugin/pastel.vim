@@ -22,6 +22,8 @@ let s:defaults={}
 let s:checks={}
 let s:whats={}
 let s:invalid={}
+"why the last value was found invalid, if the check says so
+let s:why=''
 
 "a:value as a whole number in a:low..a:high, or []; a numeric string is fine
 function s:Whole(value, low, high)
@@ -82,6 +84,240 @@ function s:Strings(value)
   return []
 endfunction
 
+"templates, as in g:pastel_detail_format: text with these % items
+"  %%        a literal %
+"  %n  %N    a line break; a place where a line may be broken if it is too
+"            long (spaces are never broken)
+"  %r %g %b  the red, green and blue of the color, 0 to 255
+"  %a        its alpha, 0 to 1
+"  %x  %X    the color as #rrggbb, followed by the alpha as two more hex
+"            digits if it is not 1, in lower and upper case
+"  %t        the color code as it is written in the buffer
+"  %{id}     the number of the detail region
+"a number may be followed by modifiers, each after a colon: p for a percent,
+"P for a percent without the sign, f for a fraction, x or X for two hex
+"digits, .N for N decimals (of p, P and f); o omits an opaque alpha; a makes
+"%x and %X always have the alpha; a % with a colon-letter after it is thus
+"always a modifier, so a colon and a letter after an item are written %{r}:x
+"all other letters and some symbols are reserved for later; an item that is not
+"known is an error and not text, so that its meaning can be added later
+let s:fallback='Region %{id}%n%x'
+let s:future_names=['rgb', 'rgba', 'hex', 'hsl', 'hsla', 'hwb', 'hwba', 'hsv',
+\                   'hsva', 'cmy', 'cmyk', 'lab', 'lch', 'oklab', 'oklch',
+\                   'color', 'name', 'xyz', 'gray']
+
+"[tokens, why] of the item a:name with the modifiers a:mods; why is '' if it
+"is valid
+function s:Item(name, mods)
+  let shown='%'.(len(a:name) == 1 ? a:name : '{'.a:name.'}')
+  if index(['r', 'g', 'b', 'a', 'x', 'X', 't', 'id'], a:name) < 0
+    if a:name =~# '^\a$'
+      return [[], shown.' is reserved']
+    elseif index(s:future_names, matchstr(a:name, '^\a*')) >= 0
+      return [[], shown.' is unsupported']
+    endif
+    return [[], shown.' is not known']
+  endif
+  let format=''
+  let precision=-1
+  let omit=0
+  let force=0
+  for mod in a:mods
+    if mod =~# '^[pPfxX]$'
+      if format !=# ''
+        return [[], shown.' has two formats']
+      endif
+      let format=mod
+    elseif mod =~# '^\.\d\+$'
+      if precision >= 0
+        return [[], shown.' has two precisions']
+      endif
+      let precision=str2nr(mod[1:])
+    elseif mod ==# 'o'
+      let omit=1
+    elseif mod ==# 'a'
+      let force=1
+    else
+      return [[], shown.':'.mod.' is not a modifier']
+    endif
+  endfor
+  if a:name =~# '^[xX]$'
+    let ok=format ==# '' && precision < 0 && !omit
+  elseif a:name ==# 'a'
+    let ok=!force && (precision < 0 || format !~# '[xX]')
+  elseif a:name =~# '^[rgb]$'
+    let ok=!omit && !force && (precision < 0 || format =~# '[pPf]')
+  else
+    let ok=format ==# '' && precision < 0 && !omit && !force
+  endif
+  if !ok
+    return [[], shown.': modifier not allowed']
+  endif
+  if a:name =~# '^[xX]$'
+    let hex=a:name ==# 'X' ? 'X' : 'x'
+    return [[{'t': 'text', 's': '#'},
+\            {'t': 'value', 'n': 'r', 'f': hex, 'p': -1, 'o': 0},
+\            {'t': 'value', 'n': 'g', 'f': hex, 'p': -1, 'o': 0},
+\            {'t': 'value', 'n': 'b', 'f': hex, 'p': -1, 'o': 0},
+\            {'t': 'value', 'n': 'a', 'f': hex, 'p': -1, 'o': !force}], '']
+  endif
+  return [[{'t': 'value', 'n': a:name, 'f': format, 'p': precision,
+\           'o': omit}], '']
+endfunction
+
+"[tokens, why] of a:template, why being '' if it is valid and what is wrong
+"with it if not
+function s:ParseTemplate(template)
+  let tokens=[]
+  let pos=0
+  while pos < len(a:template)
+    let percent=stridx(a:template, '%', pos)
+    if percent < 0
+      call add(tokens, {'t': 'text', 's': strpart(a:template, pos)})
+      break
+    elseif percent > pos
+      call add(tokens, {'t': 'text',
+\                       's': strpart(a:template, pos, percent-pos)})
+    endif
+    let pos=percent+1
+    let char=strpart(a:template, pos, 1)
+    let mods=[]
+    if char ==# ''
+      return [[], 'a % at the end, write %%']
+    elseif char ==# '%'
+      call add(tokens, {'t': 'text', 's': '%'})
+      let pos+=1
+      continue
+    elseif char ==# 'n'
+      call add(tokens, {'t': 'break'})
+      let pos+=1
+      continue
+    elseif char ==# 'N'
+      call add(tokens, {'t': 'soft'})
+      let pos+=1
+      continue
+    elseif char ==# '{'
+      let close=stridx(a:template, '}', pos)
+      if close < 0
+        return [[], 'a %{ without a }']
+      endif
+      let parts=split(strpart(a:template, pos+1, close-pos-1), ':', 1)
+      let name=parts[0]
+      let mods=parts[1:]
+      let pos=close+1
+    elseif char =~# '^[rgbaxXt]$'
+      let name=char
+      let pos+=1
+      while 1
+        let mod=matchstr(a:template, '^:\zs\%(\a\|\.\d\+\)', pos)
+        if empty(mod)
+          break
+        endif
+        call add(mods, mod)
+        let pos+=len(mod)+1
+      endwhile
+    elseif char =~# '^[#*()]$'
+      return [[], '%'.char.' is unsupported']
+    else
+      return [[], '%'.char.' is '.(char =~# '^\a$' ? 'reserved'
+\                                                   : 'not known')]
+    endif
+    let [items, why]=s:Item(name, mods)
+    if why !=# ''
+      return [[], why]
+    endif
+    call extend(tokens, items)
+  endwhile
+  return [tokens, '']
+endfunction
+
+let s:templates={}
+
+function s:Template(template)
+  if !has_key(s:templates, a:template)
+    if len(s:templates) > 100
+      let s:templates={}
+    endif
+    let s:templates[a:template]=s:ParseTemplate(a:template)
+  endif
+  return s:templates[a:template]
+endfunction
+
+"a number without trailing zeros, as a:fraction with a:decimals at most
+function s:Decimal(number, decimals)
+  let text=printf('%.'.a:decimals.'f', a:number)
+  return a:decimals > 0 ? substitute(text, '\.\?0\+$', '', '') : text
+endfunction
+
+"the text of a token with a number, of a:color
+function s:Number(token, color)
+  let alpha=a:token.n ==# 'a'
+  if alpha
+    let fraction=a:color[3]
+    if a:token.o && fraction >= 1.0
+      return ''
+    endif
+  else
+    let value=a:color[stridx('rgb', a:token.n)]
+    let fraction=value/255.0
+  endif
+  let format=a:token.f
+  if format =~# '[xX]'
+    let text=printf('%02x', float2nr(round(fraction*255)))
+    return format ==# 'X' ? toupper(text) : text
+  elseif format ==# 'p' || format ==# 'P'
+    let text=printf('%.'.max([a:token.p, 0]).'f', fraction*100)
+    return format ==# 'p' ? text.'%' : text
+  elseif format ==# 'f' || alpha
+    return a:token.p >= 0 ? printf('%.'.a:token.p.'f', fraction)
+\                         : s:Decimal(fraction, 2)
+  endif
+  return string(float2nr(round(value)))
+endfunction
+
+"a:template expanded for the color a:color of the code a:text, in the region
+"number a:id, as a list of lines, each a list of the segments between the
+"places where it may be broken
+function s:Expand(template, color, text, id)
+  let lines=[]
+  let segments=['']
+  for token in s:Template(a:template)[0]
+    if token.t ==# 'text'
+      let segments[-1].=token.s
+    elseif token.t ==# 'break'
+      call add(lines, segments)
+      let segments=['']
+    elseif token.t ==# 'soft'
+      call add(segments, '')
+    elseif token.n ==# 't'
+      let segments[-1].=a:text
+    elseif token.n ==# 'id'
+      let segments[-1].=a:id
+    else
+      let segments[-1].=s:Number(token, a:color)
+    endif
+  endfor
+  call add(lines, segments)
+  return lines
+endfunction
+
+"whether a:value is a template or a list of them
+function s:Templates(value)
+  let list=type(a:value) == v:t_list ? a:value : [a:value]
+  for template in list
+    if type(template) != v:t_string
+      let s:why='not a string'
+      return []
+    endif
+    let why=s:Template(template)[1]
+    if why !=# ''
+      let s:why=why
+      return []
+    endif
+  endfor
+  return [a:value]
+endfunction
+
 "short, as a longer message in a cursor movement is truncated by the ruler or
 "asks for a keypress
 function s:Warn(message)
@@ -103,14 +339,20 @@ endfunction
 "else a:fallback, with a warning unless this value was already warned about;
 "it does not say what is used instead, to leave room for what is wrong
 function s:Checked(name, variable, value, fallback)
+  let s:why=''
   let checked=s:checks[a:name](a:value)
   if !empty(checked)
     return checked[0]
   endif
   if get(s:invalid, a:variable, '') !=# string(a:value)
     let s:invalid[a:variable]=string(a:value)
-    call s:Warn('pastel: '.a:variable.' '.strcharpart(string(a:value), 0, 20)
-\               .' is not '.s:whats[a:name])
+    if s:why !=# ''
+      call s:Warn('pastel: '.a:variable.': '.s:why)
+    else
+      call s:Warn('pastel: '.a:variable.' '
+\                 .strcharpart(string(a:value), 0, 20)
+\                 .' is not '.s:whats[a:name])
+    endif
   endif
   return a:fallback
 endfunction
@@ -119,7 +361,7 @@ endfunction
 "the colors, as there is only one popup, shared by all buffers
 let s:buffer_local=['alpha_position', 'alpha_first_filetypes',
 \                   'ignore_filetypes', 'color_timer', 'color_size',
-\                   'bg_size', 'offset_x', 'offset_y']
+\                   'bg_size', 'offset_x', 'offset_y', 'detail_format']
 
 "the value of the option g:pastel_<name>, or of b:pastel_<name> if the buffer
 "has a valid one; an invalid one leaves the global value in effect
@@ -152,12 +394,11 @@ let g:pastel_color_mode=get(g:, 'pastel_color_mode', 't')
 "more; less than that turns alternating off, showing the first background
 call s:Define('color_timer', 5, function('s:Seconds'), 'a number')
 
-"a definition of color codes to show, from top to bottom
-"  combination of the following as a string:
-"  x - hexadecimal RGB
-"  r - rgb  0-255
-"  c - cmyk 0-255
-let g:pastel_detail_mode=get(g:, 'pastel_detail_mode', 'x')
+"what the detail regions, the d cells of g:pastel_color_mode, show: a template
+"(SEE above), for the first region, or a list of them, one for each; a region
+"without one shows its number and the color
+call s:Define('detail_format', '%x', function('s:Templates'),
+\             'a format or a list of them')
 
 "where the alpha is in 8-digit hexadecimal codes:
 "  last  - #RRGGBBAA, as in CSS
