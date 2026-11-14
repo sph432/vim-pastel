@@ -165,15 +165,19 @@
 - `g:pastel_detail_mode`, which never did anything, is replaced by
     `g:pastel_detail_format`
 
-## 0.9.1 (planned)
+## 0.9.1
 #### Added
-- Templates with the HSL, HWB, HSV and CMYK values of the color, as whole
-    notations (`%{hsl}`, with `:c` for the comma form and `:a` to always have
-    the alpha) and by component (`%{hsl.s}`), and `%(`...`%)`, which is left
-    out if an item in it is empty
+- The color as a whole in templates, `%{rgb}`, `%{hsl}`, `%{hwb}`, `%{hsv}` and
+    `%{cmyk}`, in the CSS notation (`hsl(32 100% 50% / 0.8)`), with `:c` for the
+    comma notation and `:a` to always have the alpha, and by value, eg.
+    `%{hsl.s}`; whole degrees and percents unless `.N` is given, with which
+    the notations read by the plugin give the same color back
+- Groups of items in templates, `%(`...`%)`, which are left out if an item in
+    them is empty, eg. `%( / %a:o%)`
 - Highlights in templates, `%#Group#` to `%*`, and groups for the red, green
-    and blue of the color, their inverses (cyan, magenta and yellow) and its
-    alpha, defined as the color changes
+    and blue of the color (`PastelRed`, `PastelGreen`, `PastelBlue`), their
+    inverses (`PastelCyan`, `PastelMagenta`, `PastelYellow`) and its alpha
+    (`PastelAlpha`), defined as the color changes, if a template uses them
 
 # 0.x - several popups (planned)
 #### Added
