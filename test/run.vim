@@ -532,6 +532,105 @@ let g:pastel_color_size=6
 let g:pastel_bg_size=2
 let g:pastel_color_mode='k'
 
+"buffer-local options: b:pastel_<name> overrides g:pastel_<name> in its buffer
+"only, an invalid one leaves the global value in effect, and the layout and the
+"colors cannot be overridden, as the popup is shared by all buffers
+
+"[raised, col, line, width, height] of the popup for a css buffer holding
+"s:text, with the buffer variables of a:vars set (pastel_ prefix left out)
+function s:ShownWith(vars)
+  enew!
+  let &filetype='css'
+  for [name, value] in items(a:vars)
+    let b:['pastel_'.name]=value
+  endfor
+  call setline(1, s:text)
+  call cursor(1, 2)
+  let raised=''
+  try
+    call s:Fn('OnCursorMove')()
+  catch
+    let raised=v:exception
+  endtry
+  let pos=popup_getpos(popup_list()[0])
+  return [raised, pos.col, pos.line, pos.width, pos.height]
+endfunction
+
+let g:pastel_color_mode='k'
+let s:global=s:ShownWith({})
+call s:Check('local: no override, no error', s:global[0], '')
+call s:Check('local: color_size', s:ShownWith({'color_size': 1})[3:], [5, 3])
+call s:Check('local: color_size, then the next buffer is back', s:ShownWith({})[3:], s:global[3:])
+call s:Check('local: bg_size', s:ShownWith({'bg_size': 0})[3:], [6, 3])
+call s:Check('local: bg_size as a string', s:ShownWith({'bg_size': '0'})[3:], [6, 3])
+call s:Check('local: offset_x', s:ShownWith({'offset_x': 4})[1], s:global[1]+2)
+call s:Check('local: offset_y', s:ShownWith({'offset_y': 2})[2], s:global[2]+2)
+call s:Check('local: offset_x does not leak', s:ShownWith({})[1], s:global[1])
+
+"a global value with a different local one: the local one wins in its buffer
+let g:pastel_color_size=2
+call s:Check('local: color_size over a global one', s:ShownWith({'color_size': 1})[3:], [5, 3])
+call s:Check('local: global one in another buffer', s:ShownWith({})[3:], [6, 3])
+let g:pastel_color_size=6
+
+"invalid local values warn once per value and leave the global one in effect
+let g:pastel_bg_size=0
+let s:before=s:Warnings()
+call s:Check('local: invalid, global bg_size used', s:ShownWith({'bg_size': 'x'})[3:], [6, 3])
+call s:Check('local: invalid warns', s:Warnings()-s:before, 1)
+call s:ShownWith({'bg_size': 'x'})
+call s:Check('local: invalid warns once', s:Warnings()-s:before, 1)
+let g:pastel_bg_size=2
+call s:Check('local: invalid, global changed', s:ShownWith({'bg_size': 'x'})[3:], [10, 5])
+let s:before=s:Warnings()
+call s:ShownWith({'color_size': 0})
+call s:Check('local: out of range warns', s:Warnings()-s:before, 1)
+call s:Check('local: the warning names the variable', len(filter(split(execute('messages'), "\n"), 'v:val =~# "^pastel: b:pastel_color_size 0 is not"')), 1)
+
+"the filetype lists and the position of the alpha
+call s:Check('local: ignore_filetypes', s:At('#fff', 2, 'css'), [[255, 255, 255, 1000], 0, 4])
+function s:AtWith(text, col, ft, vars)
+  enew!
+  let &filetype=a:ft
+  for [name, value] in items(a:vars)
+    let b:['pastel_'.name]=value
+  endfor
+  call setline(1, a:text)
+  call cursor(1, a:col)
+  let found=s:Fn('ColorAtCursor')()
+  return empty(found) ? [] : [s:Thousandths(found[0]), found[1], found[2]]
+endfunction
+call s:Check('local: ignore_filetypes ignores', s:AtWith('#fff', 2, 'css', {'ignore_filetypes': ['css']}), [])
+call s:Check('local: ignore_filetypes can ignore nothing', s:AtWith('#fff', 2, 'sql', {'ignore_filetypes': []}), [[255, 255, 255, 1000], 0, 4])
+call s:Check('local: ignore_filetypes does not leak', s:At('#fff', 2, 'sql'), [])
+call s:Check('local: invalid ignore_filetypes', s:AtWith('#fff', 2, 'sql', {'ignore_filetypes': 'css'}), [])
+let g:pastel_alpha_position='last'
+call s:Check('local: alpha_first_filetypes', s:AtWith('#80ff0000', 2, 'css', {'alpha_position': 'auto', 'alpha_first_filetypes': ['css']}), [[255, 0, 0, 502], 0, 9])
+call s:Check('local: alpha_position', s:AtWith('#80ff0000', 2, 'css', {'alpha_position': 'first'}), [[255, 0, 0, 502], 0, 9])
+let g:pastel_alpha_position='auto'
+
+"the timer interval: 0 turns alternating off in that buffer only
+let g:pastel_color_mode='2'
+let s:timers=len(timer_info())
+call s:ShownWith({'color_timer': 0})
+call s:Check('local: color_timer 0, no timer', len(timer_info()), s:timers)
+call s:ShownWith({'color_timer': 1})
+call s:Check('local: color_timer 1, a timer', len(timer_info()), s:timers+1)
+call s:ShownWith({})
+call s:Check('local: global color_timer, the timer stays', len(timer_info()), s:timers+1)
+call s:Fn('Hide')()
+call s:Check('local: timer stopped on hiding', len(timer_info()), s:timers)
+let g:pastel_color_mode='k'
+
+"the layout and the colors are not overridden, nor warned about
+let s:before=s:Warnings()
+let s:shown=s:ShownWith({'color_mode': 'w|w', 'black_bg': '#123456', 'white_bg': '#123456', 'trans_fg': '#123456', 'trans_bg': '#123456'})
+call s:Check('local: layout not overridden', s:shown[3:], s:global[3:])
+call s:Check('local: layout and colors raise nothing', s:shown[0], '')
+call s:Check('local: black not overridden', s:Attr('pastelpkk', 'bg#'), '#000000')
+call s:Check('local: white not overridden', s:Attr('pastelpww', 'bg#'), '#ffffff')
+call s:Check('local: no warnings from them', s:Warnings(), s:before)
+
 "placement: [start, fits] of a popup of a size on an axis, from the positions
 "[first, last] of the code, an offset and the limits low..high
 let s:Axis=s:Fn('Axis')
