@@ -45,6 +45,9 @@ function s:At(text, col, ...)
   return empty(found) ? [] : [s:Thousandths(found[0]), found[1], found[2]]
 endfunction
 
+"the default of the ignored filetypes
+call s:Check('default ignored filetypes', g:pastel_ignore_filetypes, ['gitcommit', '*sql*'])
+
 "hexadecimal codes
 call s:Check('#RRGGBB', s:At('x #FF8800 y', 4), [[255, 136, 0, 1000], 2, 9])
 call s:Check('#RRGGBB lower case', s:At('#ff8800', 1), [[255, 136, 0, 1000], 0, 7])
@@ -83,6 +86,26 @@ call s:Check('another ignored filetype', s:At('fixes #123', 9, 'gitcommit'), [])
 call s:Check('ignored compound filetype', s:At('#fff', 2, 'html.sql'), [])
 call s:Check('other filetype', s:At('#fff', 2, 'css'), [[255, 255, 255, 1000], 0, 4])
 call s:Check('no filetype', s:At('#fff', 2), [[255, 255, 255, 1000], 0, 4])
+let g:pastel_ignore_filetypes=['*sql*', 'gitcommit']
+call s:Check('glob: sql', s:At('#fff', 2, 'sql'), [])
+call s:Check('glob: mysql', s:At('#fff', 2, 'mysql'), [])
+call s:Check('glob: plsql', s:At('#fff', 2, 'plsql'), [])
+call s:Check('glob: sqloracle', s:At('#fff', 2, 'sqloracle'), [])
+call s:Check('glob: pgsql in a compound', s:At('#fff', 2, 'foo.pgsql'), [])
+call s:Check('glob: gitcommit exactly', s:At('#fff', 2, 'gitcommit'), [])
+call s:Check('glob: not a substring of gitcommit', s:At('#fff', 2, 'gitcommitx'), [[255, 255, 255, 1000], 0, 4])
+call s:Check('glob: css', s:At('#fff', 2, 'css'), [[255, 255, 255, 1000], 0, 4])
+let g:pastel_ignore_filetypes=['?ml', '[jk]*', '{c,h}pp', 'sql*']
+call s:Check('glob: ?', s:At('#fff', 2, 'xml'), [])
+call s:Check('glob: ? needs one character', s:At('#fff', 2, 'ml'), [[255, 255, 255, 1000], 0, 4])
+call s:Check('glob: [] java', s:At('#fff', 2, 'java'), [])
+call s:Check('glob: [] kotlin', s:At('#fff', 2, 'kotlin'), [])
+call s:Check('glob: [] css', s:At('#fff', 2, 'css'), [[255, 255, 255, 1000], 0, 4])
+call s:Check('glob: {} cpp', s:At('#fff', 2, 'cpp'), [])
+call s:Check('glob: {} hpp', s:At('#fff', 2, 'hpp'), [])
+call s:Check('glob: {} xpp', s:At('#fff', 2, 'xpp'), [[255, 255, 255, 1000], 0, 4])
+call s:Check('glob: prefix', s:At('#fff', 2, 'sqlite'), [])
+call s:Check('glob: prefix only', s:At('#fff', 2, 'mysql'), [[255, 255, 255, 1000], 0, 4])
 let g:pastel_ignore_filetypes=[]
 call s:Check('nothing ignored', s:At('#fff', 2, 'sql'), [[255, 255, 255, 1000], 0, 4])
 call s:Check('issue number in a commit message', s:At('fixes #123', 9, 'gitcommit'), [[17, 34, 51, 1000], 6, 10])
