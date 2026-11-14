@@ -631,6 +631,109 @@ call s:Check('local: black not overridden', s:Attr('pastelpkk', 'bg#'), '#000000
 call s:Check('local: white not overridden', s:Attr('pastelpww', 'bg#'), '#ffffff')
 call s:Check('local: no warnings from them', s:Warnings(), s:before)
 
+"templates: a:template expanded for a color, with the segments of a line joined
+"by ~, as a list of lines
+function s:Ex(template, color, ...)
+  let text=a:0 >= 1 ? a:1 : ''
+  let lines=s:Fn('Expand')(a:template, a:color, text, a:0 >= 2 ? a:2 : 1)
+  return map(lines, 'join(v:val, "~")')
+endfunction
+let s:dark=[127, 0, 0, 1.0]
+let s:rgb=[255, 136, 0, 1.0]
+let s:half=[255, 136, 0, 0.8]
+call s:Check('template: text', s:Ex('abc', s:dark), ['abc'])
+call s:Check('template: empty', s:Ex('', s:dark), [''])
+call s:Check('template: literal percent', s:Ex('100%%', s:dark), ['100%'])
+call s:Check('template: channels', s:Ex('%r %g %b', s:rgb), ['255 136 0'])
+call s:Check('template: braced channel', s:Ex('%{r}', s:rgb), ['255'])
+call s:Check('template: percent', s:Ex('%r:p', s:dark), ['50%'])
+call s:Check('template: percent number', s:Ex('%r:P', s:dark), ['50'])
+call s:Check('template: fraction', s:Ex('%r:f', s:dark), ['0.5'])
+call s:Check('template: hex', s:Ex('%r:x', s:dark), ['7f'])
+call s:Check('template: hex upper case', s:Ex('%r:X', s:dark), ['7F'])
+call s:Check('template: hex pads', s:Ex('%g:x', s:dark), ['00'])
+call s:Check('template: precision', s:Ex('%r:p:.1', s:dark), ['49.8%'])
+call s:Check('template: precision of a fraction', s:Ex('%{r:f:.3}', s:dark), ['0.498'])
+call s:Check('template: precision keeps zeros', s:Ex('%{a:.3}', s:half), ['0.800'])
+call s:Check('template: whole percent', s:Ex('%b:P', s:rgb), ['0'])
+call s:Check('template: full fraction', s:Ex('%r:f', s:rgb), ['1'])
+call s:Check('template: alpha', s:Ex('%a', s:half), ['0.8'])
+call s:Check('template: opaque alpha', s:Ex('%a', s:rgb), ['1'])
+call s:Check('template: alpha percent', s:Ex('%a:p', s:half), ['80%'])
+call s:Check('template: alpha hex', s:Ex('%a:x', s:half), ['cc'])
+call s:Check('template: omitted opaque alpha', s:Ex('[%a:o]', s:rgb), ['[]'])
+call s:Check('template: omitted alpha shown if not opaque', s:Ex('[%a:o]', s:half), ['[0.8]'])
+call s:Check('template: colon between items', s:Ex('%r:%g:%b', s:rgb), ['255:136:0'])
+call s:Check('template: colon and a letter after braces', s:Ex('%{r}:x', s:rgb), ['255:x'])
+call s:Check('template: colon and a digit', s:Ex('%r:5', s:rgb), ['255:5'])
+call s:Check('template: colon at the end', s:Ex('%r:', s:rgb), ['255:'])
+call s:Check('template: hex shorthand', s:Ex('%x', s:dark), ['#7f0000'])
+call s:Check('template: hex shorthand, alpha', s:Ex('%x', s:half), ['#ff8800cc'])
+call s:Check('template: hex shorthand upper case', s:Ex('%X', s:half), ['#FF8800CC'])
+call s:Check('template: hex shorthand, forced alpha', s:Ex('%x:a', s:dark), ['#7f0000ff'])
+call s:Check('template: hex shorthand, braced', s:Ex('%{X:a}', s:dark), ['#7F0000FF'])
+call s:Check('template: source text', s:Ex('<%t>', s:rgb, 'rgb(255 136 0)'), ['<rgb(255 136 0)>'])
+call s:Check('template: region number', s:Ex('Region %{id}', s:rgb, '', 3), ['Region 3'])
+call s:Check('template: line break', s:Ex('a%nb%n%nc', s:rgb), ['a', 'b', '', 'c'])
+call s:Check('template: soft break', s:Ex('a%Nb c%Nd%ne', s:rgb), ['a~b c~d', 'e'])
+call s:Check('template: a text with a percent in it is not expanded', s:Ex('%t', s:rgb, '%r'), ['%r'])
+call s:Check('template: fallback', s:Ex('Region %{id}%n%x', s:rgb, '', 2), ['Region 2', '#ff8800'])
+
+"templates that are not valid, with what is wrong
+let s:Template=s:Fn('Template')
+function s:Why(template)
+  return s:Template(a:template)[1]
+endfunction
+call s:Check('template: valid', s:Why('%r %{g}:p %x %n%N%% %t %{id} %a:o:p:.1'), '')
+call s:Check('template: percent at the end', s:Why('a%'), 'a % at the end, write %%')
+call s:Check('template: unclosed brace', s:Why('%{r'), 'a %{ without a }')
+call s:Check('template: reserved letter', s:Why('%q'), '%q is reserved')
+call s:Check('template: reserved capital', s:Why('%R'), '%R is reserved')
+call s:Check('template: reserved symbol', s:Why('%#Group#'), '%# is unsupported')
+call s:Check('template: reserved group', s:Why('%('), '%( is unsupported')
+call s:Check('template: reserved reset', s:Why('%*'), '%* is unsupported')
+call s:Check('template: not known symbol', s:Why('%!'), '%! is not known')
+call s:Check('template: digit', s:Why('%1'), '%1 is not known')
+call s:Check('template: space', s:Why('% x'), '%  is not known')
+call s:Check('template: later name', s:Why('%{hsl}'), '%{hsl} is unsupported')
+call s:Check('template: later component', s:Why('%{hsl.s}'), '%{hsl.s} is unsupported')
+call s:Check('template: later color space', s:Why('%{oklch.c}'), '%{oklch.c} is unsupported')
+call s:Check('template: braced letter', s:Why('%{s}'), '%s is reserved')
+call s:Check('template: braced capital', s:Why('%{L}'), '%L is reserved')
+call s:Check('template: not known name', s:Why('%{foo}'), '%{foo} is not known')
+call s:Check('template: empty name', s:Why('%{}'), '%{} is not known')
+call s:Check('template: not a modifier', s:Why('%r:q'), '%r:q is not a modifier')
+call s:Check('template: not a braced modifier', s:Why('%{r:q}'), '%r:q is not a modifier')
+call s:Check('template: empty braced modifier', s:Why('%{r:}'), '%r: is not a modifier')
+call s:Check('template: two formats', s:Why('%r:p:x'), '%r has two formats')
+call s:Check('template: two precisions', s:Why('%{r:p:.1:.2}'), '%r has two precisions')
+call s:Check('template: precision of an integer', s:Why('%r:.2'), '%r: modifier not allowed')
+call s:Check('template: omitting a channel', s:Why('%r:o'), '%r: modifier not allowed')
+call s:Check('template: forcing a channel', s:Why('%r:a'), '%r: modifier not allowed')
+call s:Check('template: forcing alpha', s:Why('%a:a'), '%a: modifier not allowed')
+call s:Check('template: precision of a hex alpha', s:Why('%a:x:.2'), '%a: modifier not allowed')
+call s:Check('template: format of the shorthand', s:Why('%x:p'), '%x: modifier not allowed')
+call s:Check('template: omitting in the shorthand', s:Why('%X:o'), '%X: modifier not allowed')
+call s:Check('template: modifier of the text', s:Why('%t:p'), '%t: modifier not allowed')
+call s:Check('template: modifier of the number', s:Why('%{id:p}'), '%{id}: modifier not allowed')
+call s:Check('template: a break takes no modifier, it is text', s:Why('%n:p'), '')
+call s:Check('template: id only in braces', s:Why('%id'), '%i is reserved')
+let s:letters=[]
+for s:code in range(char2nr('A'), char2nr('Z')) + range(char2nr('a'), char2nr('z'))
+  let s:letter=nr2char(s:code)
+  if s:letter !~# '^[rgbaxXtnN]$' && s:Why('%'.s:letter) != '%'.s:letter.' is reserved'
+    call add(s:letters, s:letter)
+  endif
+endfor
+call s:Check('template: every other letter is reserved', s:letters, [])
+let s:letters=[]
+for s:letter in split('rgbaxXtnN', '\zs')
+  if s:letter !~# '^[nN]$' && s:Why('%'.s:letter) != ''
+    call add(s:letters, s:letter)
+  endif
+endfor
+call s:Check('template: the letters in use are valid', s:letters, [])
+
 "placement: [start, fits] of a popup of a size on an axis, from the positions
 "[first, last] of the code, an offset and the limits low..high
 let s:Axis=s:Fn('Axis')
