@@ -60,6 +60,14 @@ CONTENTS                                                     *pastel-contents*
     size, raises no error: a short warning is shown, once per value, and the
     default is used instead. Numbers may also be given as strings, eg. '6'.
 
+    Except for g:pastel_color_mode and the four color options, which belong to
+    the one shared popup, every option can be overridden for a buffer by the
+    variable with the same name, b:pastel_<name>. It takes precedence over the
+    global one in its buffer, is validated the same way, and an invalid value
+    leaves the global one in effect, with a warning. Example: >
+        autocmd FileType markdown let b:pastel_color_size=3
+<
+
 g:pastel_color_mode  (default "t")                       *g:pastel_color_mode*
     The previews to show and their layout: a string of block letters, left to
     right, with these meanings:

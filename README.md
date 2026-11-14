@@ -102,6 +102,13 @@ A value that is not valid for its option (eg. a float or a list for a size, or
 shown, once per value, and the default is used instead. Numbers may also be
 given as strings, eg. `'6'`.
 
+Except for `g:pastel_color_mode` and the four color options, which belong to
+the one shared popup, every option can be overridden for a buffer by the
+variable with the same name, `b:pastel_<name>`, eg.
+`autocmd FileType markdown let b:pastel_color_size=3`. It takes precedence over
+the global one in its buffer, is validated the same way, and an invalid value
+leaves the global one in effect (with a warning).
+
 - `g:pastel_color_mode` (`'t'`) - the previews to show and their layout, a
     string of block letters, left to right:
   - `k`: the color on black
@@ -135,8 +142,7 @@ given as strings, eg. `'6'`.
   - `'auto'`: `'first'` in the filetypes of `g:pastel_alpha_first_filetypes`,
         `'last'` in the others, and a short note (`pastel: assuming ...`) the
         first time an 8-digit code is found in a buffer, as it is a guess
-  - the buffer-local variant `b:pastel_alpha_position`, if set, takes precedence
-        in its buffer; eg. to force MSB-alpha in your Android project, you could use 
+  - eg. to force MSB-alpha in your Android project, you could use
         `autocmd BufRead /path/to/my/android/project/*.xml let b:pastel_alpha_position='first'`
   - Note that the 4-digit form is not affected, it is always parsed as `#RGBA`.
 - `g:pastel_alpha_first_filetypes` (`['java', 'kotlin']`) - the filetypes where
