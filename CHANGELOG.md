@@ -179,6 +179,42 @@
     inverses (`PastelCyan`, `PastelMagenta`, `PastelYellow`) and its alpha
     (`PastelAlpha`), defined as the color changes, if a template uses them
 
+# 0.10 - ANSI colors (planned)
+## 0.10.0 (planned)
+#### Added
+- Colors in ANSI SGR sequences: `38`, `48` and `58` (foreground, background
+    and underline) with `2` (RGB), `3` (CMY) or `4` (CMYK), in the semicolon
+    form (`38;2;255;136;0`) and the colon form (`38:2::255:136:0`); the
+    sequence may be written with a real escape character, `\e`, `\033`,
+    `\x1b`, `^[`, or without any (`38;2;255;136;0`). The color space tag of
+    T.416 (the empty element after `2`, `3` or `4` in the colon form) is
+    accepted and ignored for now. The indexed form (`38:5:n`) is not planned
+- This is the first notation with CMY and CMYK, which also gives `%{cmyk}`
+    and a `cmy` model for templates a notation to be read back as
+
+# 0.11 - color operations (planned)
+Pastel's commands that change a color, working on the color under the cursor
+and rewriting it in place, in its own notation, or in another one. They need
+the models of the templates to give the same color back (SEE
+`g:pastel_detail_format`) and a decision on where results go.
+#### Added
+- `pick`: choose a color and insert it; undecided: into the buffer or a
+    register, and in which format
+- `complement`, `rotate` (the hue), `lighten` and `darken`, `saturate` and
+    `desaturate` (`to-gray` of pastel is the latter taken to the end)
+- `format`: rewrite the color in another notation, eg. from `#ff8800` to
+    `hsl(32 100% 50%)`
+- Showing an arbitrary color in the popup, not only one in the buffer
+    (pastel's `color`)
+
+# 0.12 - more color tools (maybe, planned)
+#### Added
+- `mix`, `gradient`, `distinct` and `random`
+- `colorblind` (simulation of color vision deficiencies) and `textcolor`
+    (the readable black or white for a background)
+- Some of these, eg. `gradient` and `distinct`, need to produce several
+    colors, so where results go (SEE 0.11.0) matters more
+
 # 0.x - several popups (planned)
 #### Added
 - A popup for each window or buffer instead of the single shared one, and with
@@ -195,9 +231,15 @@
 - Colors outside sRGB are mapped into it as CSS Color 4 specifies, instead of
     being clamped to it
 
+# Not planned
+Commands of pastel that do not fit a plugin or are already covered: `colorcheck`
+(truecolor is required anyway), `gray` (only a special case of `desaturate`),
+`paint` (no text formatting, ANSI output is `format`), `help` and `list`
+(`:help pastel`).
+
 # TODO
 - Color notations from outside the web: no source of truth was surveyed yet
     (eg. languages' color literals, X11 `rgb:RR/GG/BB`, LaTeX)
-- CMY, CMYK and CMYKA notations: there is no agreed-upon syntax, not even in
-    CSS
+- CMY, CMYK and CMYKA notations other than ANSI SGR (0.10.0): there is no
+    agreed-upon syntax, not even in CSS
 - Make it work with other color-code detectors (eg. RRethy/vim-hexokinase)
