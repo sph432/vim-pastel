@@ -112,9 +112,19 @@
 - `g:pastel_ignore_filetypes`, the filetypes where no colors are looked for,
     as glob patterns; `gitcommit` and `*sql*` by default
 
+#### Changed
+- Invalid option values (eg. a float or a list for a size, a color Vim does
+    not know, `'FIRST'` for `g:pastel_alpha_position`) are warned about, once
+    per value, and the option's default is used instead; `g:pastel_color_size`
+    must now be from 1 to 1000, and `g:pastel_bg_size` from 0 to 1000
+
 #### Fixed
 - Cursor movement lagging on very long lines (seconds, on lines of millions
     of characters): lines longer than `'synmaxcol'` are not searched
+- An error on every cursor movement with a float, a list or an unknown color
+    as an option's value
+- Vim hanging with very large sizes: only the part of the popup on the screen
+    is drawn
 
 # 1.x - color spaces (planned)
 #### Added
