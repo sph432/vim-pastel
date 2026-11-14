@@ -145,11 +145,35 @@
     background, as in sharkdp/pastel), as it was `'k'`; set it to `'k'` to
     keep the black one
 
-# 0.9 - details (planned)
-## 0.9.0 (planned)
+# 0.9 - details
+## 0.9.0
 #### Added
-- Shown color formats adjustable with `g:pastel_detail_mode`: the color's
-    value as text below the previews, in hexadecimal, `rgb` and others
+- Detail regions: `d` cells in `g:pastel_color_mode` show text about the color
+    as given by the new `g:pastel_detail_format` (a template for the first
+    region or a list of them, `'%x'` by default; a region without one shows its
+    number and the color). Cells next to each other are one region, which has
+    to be a rectangle; a `.` between cells, or a row of only `.` between rows,
+    keeps regions apart and takes no room. Regions grow to the right, then
+    down, into free space as far as their text needs, and are cut with `…`
+    where they can not
+- Templates with the items `%r %g %b %a %x %X %t %{id} %n %N %%` and the
+    modifiers `p P f x X .N o a` (eg. `%r:p:.1`); the other items, `%#`, `%*`,
+    `%(`, `%)` and the color space names are reserved, and an invalid item is
+    warned about, not taken for text
+
+#### Changed
+- `g:pastel_detail_mode`, which never did anything, is replaced by
+    `g:pastel_detail_format`
+
+## 0.9.1 (planned)
+#### Added
+- Templates with the HSL, HWB, HSV and CMYK values of the color, as whole
+    notations (`%{hsl}`, with `:c` for the comma form and `:a` to always have
+    the alpha) and by component (`%{hsl.s}`), and `%(`...`%)`, which is left
+    out if an item in it is empty
+- Highlights in templates, `%#Group#` to `%*`, and groups for the red, green
+    and blue of the color, their inverses (cyan, magenta and yellow) and its
+    alpha, defined as the color changes
 
 # 0.x - several popups (planned)
 #### Added
