@@ -195,6 +195,9 @@
     and a `cmy` model for templates a notation to be read back as
 
 # 0.11 - color operations (planned)
+Note: sharkdp/pastel itself only reads `#RRGGBB`, `#RGB` and the comma forms
+of `rgb()` and `hsl()`, so what the plugin detects (SEE 0.6, 0.9, 0.10) is
+already a superset of it.
 Pastel's commands that change a color, working on the color under the cursor
 and rewriting it in place, in its own notation, or in another one. They need
 the models of the templates to give the same color back (SEE
@@ -244,6 +247,9 @@ Commands of pastel that do not fit a plugin or are already covered: `colorcheck`
 (`:help pastel`).
 
 # TODO
+- Templates: `:.N` on the whole models (`%{hsl:.2}`) should only show decimals
+    where they make sense or the model supports them, not on every number
+    (now `hsl(32.00 100.00% 50.00%)`)
 - Color notations from outside the web: no source of truth was surveyed yet
     (eg. languages' color literals, X11 `rgb:RR/GG/BB`, LaTeX)
 - CMY, CMYK and CMYKA notations other than ANSI SGR (0.10.0): there is no
