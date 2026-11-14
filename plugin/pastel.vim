@@ -276,7 +276,11 @@ function s:AddEmptyCells(rects, line, from, to)
 endfunction
 
 function s:SetPopupContent(popup)
+  "what is beyond the screen is never seen, so the work is limited to it, as
+  "sizes can be so large that drawing them all would hang Vim
   let [width, lines]=s:Size()
+  let width=min([width, &columns])
+  let lines=min([lines, &lines])
   let popuptext=[]
   let mask=[]
   for line in range(lines)
