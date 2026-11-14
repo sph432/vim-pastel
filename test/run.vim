@@ -256,6 +256,140 @@ call s:Check('half on dark', s:Blend([255, 0, 0, 128/255.0], '#404040'), '#A0202
 call s:Check('half on light', s:Blend([255, 0, 0, 128/255.0], '#BFBFBF'), '#DF5F5F')
 call s:Check('background not a hex color', s:Blend([255, 0, 0, 0.5], 'red'), '#FF0000')
 
+"the colors the popup really gets: they are read back from the highlight
+"groups, as the text properties of the popup refer to them by name, so that eg.
+"two names that Vim takes to be the same group show up as a wrong color
+
+"the gui color of an attribute (fg# or bg#) of a highlight group, lower case,
+"or '' if it has none
+function s:Attr(group, what)
+  return tolower(synIDattr(synIDtrans(hlID(a:group)), a:what, 'gui'))
+endfunction
+
+"show the popup for a:text, with the cursor on its first character, and
+"return its pixels, a list of rows, each a list of colors: two rows per line of
+"the popup, a character being one pixel wide, and either a space, which is its
+"background color twice, or a half block, which is its foreground over its
+"background
+function s:Pixels(text)
+  enew!
+  let b:pastel_alpha_position='last'
+  call setline(1, a:text)
+  call cursor(1, 1)
+  call s:Fn('OnCursorMove')()
+  let buf=winbufnr(popup_list()[0])
+  let rows=[]
+  for lnum in range(1, line('$', popup_list()[0]))
+    let text=getbufline(buf, lnum)[0]
+    let upper=[]
+    let lower=[]
+    for prop in prop_list(lnum, {'bufnr': buf})
+      let fg=s:Attr(prop.type, 'fg#')
+      let bg=s:Attr(prop.type, 'bg#')
+      for char in split(strpart(text, prop.col-1, prop.length), '\zs')
+        call add(upper, char == ' ' ? bg : fg)
+        call add(lower, bg)
+      endfor
+    endfor
+    call extend(rows, [upper, lower])
+  endfor
+  return rows
+endfunction
+
+"the pixels expected for a popup of a:width by a:height pixels, with the color
+"of the pixel at (x, y) given by a:Color
+function s:Grid(width, height, Color)
+  return map(range(a:height), {y -> map(range(a:width), {x -> a:Color(x, y)})})
+endfunction
+
+"a block of 10 by 10 pixels, 2 of margin and 6 of color, with the background of
+"a:back(x, y) and the color a:front, or the pixel of another block at the end
+function s:Block(x, y, back, front)
+  let inside=a:x >= 2 && a:x < 8 && a:y >= 2 && a:y < 8
+  return inside ? a:front : a:back
+endfunction
+
+let g:pastel_black_bg='#000000'
+let g:pastel_white_bg='#FFFFFF'
+let g:pastel_trans_bg='#404040'
+let g:pastel_trans_fg='#BFBFBF'
+let g:pastel_color_size=6
+let g:pastel_bg_size=2
+
+let g:pastel_color_mode='k'
+call s:Check('pixels: opaque on black', s:Pixels('#ff8800'),
+\            s:Grid(10, 10, {x, y -> s:Block(x, y, '#000000', '#ff8800')}))
+let g:pastel_color_mode='w'
+call s:Check('pixels: opaque on white', s:Pixels('#ff8800'),
+\            s:Grid(10, 10, {x, y -> s:Block(x, y, '#ffffff', '#ff8800')}))
+let g:pastel_color_mode='t'
+call s:Check('pixels: opaque on checkers', s:Pixels('#ff8800'),
+\            s:Grid(10, 10, {x, y -> s:Block(x, y, (x+y) % 2 ? '#404040' : '#bfbfbf', '#ff8800')}))
+
+"half transparent, #FF000080, on each background
+let g:pastel_color_mode='k'
+call s:Check('pixels: alpha on black', s:Pixels('#ff000080'),
+\            s:Grid(10, 10, {x, y -> s:Block(x, y, '#000000', '#800000')}))
+let g:pastel_color_mode='w'
+call s:Check('pixels: alpha on white', s:Pixels('#ff000080'),
+\            s:Grid(10, 10, {x, y -> s:Block(x, y, '#ffffff', '#ff7f7f')}))
+let g:pastel_color_mode='t'
+call s:Check('pixels: alpha on checkers', s:Pixels('#ff000080'),
+\            s:Grid(10, 10, {x, y -> s:Block(x, y, (x+y) % 2 ? '#404040' : '#bfbfbf', (x+y) % 2 ? '#a02020' : '#df5f5f')}))
+
+"two rows, the second shorter: the empty part has no color
+let g:pastel_color_mode='kw|t'
+function s:KwT(x, y)
+  let row=a:y / 10
+  let col=a:x / 10
+  if row == 1 && col == 1
+    return ''
+  endif
+  let x=a:x % 10
+  let y=a:y % 10
+  let back=row == 0 ? (col == 0 ? '#000000' : '#ffffff') : ((x+y) % 2 ? '#404040' : '#bfbfbf')
+  return s:Block(x, y, back, '#00ff00')
+endfunction
+call s:Check('pixels: two rows', s:Pixels('#00ff00'), s:Grid(20, 20, function('s:KwT')))
+
+"an odd height is padded with a row of no color
+let g:pastel_color_mode='k'
+let g:pastel_color_size=3
+let g:pastel_bg_size=1
+call s:Check('pixels: odd height', s:Pixels('#0000ff'),
+\            s:Grid(5, 6, {x, y -> y == 5 ? '' : (x >= 1 && x < 4 && y >= 1 && y < 4 ? '#0000ff' : '#000000')}))
+let g:pastel_color_size=6
+let g:pastel_bg_size=2
+
+"other colors of the backgrounds
+let g:pastel_black_bg='#102030'
+let g:pastel_color_mode='k'
+call s:Check('pixels: changed background', s:Pixels('#ff8800')[0][0], '#102030')
+let g:pastel_black_bg='#000000'
+call s:Check('pixels: changed back', s:Pixels('#ff8800')[0][0], '#000000')
+
+"every highlight group of the popup, for each of 2 colors: the letters stand
+"for the background colors, and the digits for the color on them
+let s:names={'k': '#000000', 'w': '#ffffff', 'd': '#404040', 'l': '#bfbfbf', 'n': ''}
+for s:code in ['#ff8800', '#12345678']
+  let g:pastel_color_mode='k'
+  call s:Pixels(s:code)
+  let s:shown=s:code == '#ff8800' ? {'1': '#ff8800', '2': '#ff8800', '3': '#ff8800', '4': '#ff8800'}
+\                                   : {'1': '#081828', '2': '#8f9faf', '3': '#2a3a4a', '4': '#6e7e8e'}
+  let s:wrong=[]
+  for s:upper in keys(extend(copy(s:names), s:shown))
+    for s:lower in keys(extend(copy(s:names), s:shown))
+      let s:group='pastelp'.s:upper.s:lower
+      let s:expectedfg=get(s:names, s:upper, get(s:shown, s:upper, ''))
+      let s:expectedbg=get(s:names, s:lower, get(s:shown, s:lower, ''))
+      if s:Attr(s:group, 'fg#') != s:expectedfg || s:Attr(s:group, 'bg#') != s:expectedbg
+        call add(s:wrong, s:group.' is '.s:Attr(s:group, 'fg#').' on '.s:Attr(s:group, 'bg#'))
+      endif
+    endfor
+  endfor
+  call s:Check('highlight groups for '.s:code, s:wrong, [])
+endfor
+
 "print the results, which :print does to the standard output in Ex mode
 function s:Report(lines)
   enew!
