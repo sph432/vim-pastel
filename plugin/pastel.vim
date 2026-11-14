@@ -718,9 +718,10 @@ endfunction
 
 "[start, fits] of a popup of a:size on one axis, placed relative to the anchor
 "positions [a:first, a:last] by offset a:off (SEE g:pastel_offset_x/y);
-"the offset is inverted if the popup would not fit in 1..a:limit; if it fits
-"neither way, it is moved into 1..a:limit as far as possible and fits is 0
-function s:Axis(first, last, size, off, limit)
+"the offset is inverted if the popup would not fit in a:low..a:limit; if it
+"fits neither way, it is moved into a:low..a:limit as far as possible and fits
+"is 0
+function s:Axis(first, last, size, off, low, limit)
   let starts=[]
   for off in [a:off, -a:off]
     if off > 0
@@ -732,19 +733,30 @@ function s:Axis(first, last, size, off, limit)
     endif
   endfor
   for start in starts
-    if start >= 1 && start+a:size-1 <= a:limit
+    if start >= a:low && start+a:size-1 <= a:limit
       return [start, 1]
     endif
   endfor
-  return [max([1, min([starts[0], a:limit-a:size+1])]), 0]
+  return [max([a:low, min([starts[0], a:limit-a:size+1])]), 0]
+endfunction
+
+"[first, last] screen lines the popup may cover: not the tabline, if there is
+"one, nor the status line of the last window, nor the command line
+function s:Rows()
+  let tabline=&showtabline == 2 || &showtabline == 1 && tabpagenr('$') > 1
+  if has('gui_running') && &guioptions =~# 'e'
+    let tabline=0
+  endif
+  let status=&laststatus >= 2 || &laststatus == 1 && winnr('$') > 1
+  return [1+tabline, &lines-&cmdheight-status]
 endfunction
 
 "popup position for the code at byte range [mbeg, mend); if there is no room
 "on either side of the code, the popup goes above or below its line instead
 function s:Position(mbeg, mend)
   let [w, h]=s:Size()
-  let maxline=&lines-&cmdheight
-  if (w > &columns || h > maxline) && !s:warned
+  let [minline, maxline]=s:Rows()
+  if (w > &columns || h > maxline-minline+1) && !s:warned
     let s:warned=1
     echohl WarningMsg
     echom 'pastel: the popup ('.w.'x'.h.') is larger than the screen'
@@ -757,13 +769,13 @@ function s:Position(mbeg, mend)
   let scrrow=wrow+winline()-1
   let first=scrcol-(cur-a:mbeg)
   let [left, fits]=s:Axis(first, scrcol+(a:mend-1-cur), w,
-\                         s:Opt('offset_x'), &columns)
+\                         s:Opt('offset_x'), 1, &columns)
   if fits
-    let [top, fits]=s:Axis(scrrow, scrrow, h, offset_y, maxline)
+    let [top, fits]=s:Axis(scrrow, scrrow, h, offset_y, minline, maxline)
   else
     let left=max([1, min([first, &columns-w+1])])
-    let [top, fits]=s:Axis(scrrow, scrrow, h,
-\                          offset_y ? offset_y : 1, maxline)
+    let [top, fits]=s:Axis(scrrow, scrrow, h, offset_y ? offset_y : 1,
+\                          minline, maxline)
   endif
   return {'line': top, 'col': left, 'pos': 'topleft'}
 endfunction
