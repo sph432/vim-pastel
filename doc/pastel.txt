@@ -60,7 +60,7 @@ CONTENTS                                                     *pastel-contents*
     size, raises no error: a short warning is shown, once per value, and the
     default is used instead. Numbers may also be given as strings, eg. '6'.
 
-g:pastel_color_mode  (default "k")                       *g:pastel_color_mode*
+g:pastel_color_mode  (default "t")                       *g:pastel_color_mode*
     The previews to show and their layout: a string of block letters, left to
     right, with these meanings:
 
