@@ -14,6 +14,113 @@ endif
 let s:pastel_win=0
 let s:warned=0
 
+"options are read every time they are used, so changes take effect at once; an
+"invalid value is warned about, once per value, and the default is used
+"instead, as s:Opt(name) does; the checks return [value] or [] if invalid
+let s:defaults={}
+let s:checks={}
+let s:whats={}
+let s:invalid={}
+
+"a:value as a whole number in a:low..a:high, or []; a numeric string is fine
+function s:Whole(value, low, high)
+  if type(a:value) == v:t_string && a:value =~ '^[+-]\?\d\+$'
+    let number=str2nr(a:value)
+  elseif type(a:value) == v:t_number
+    let number=a:value
+  else
+    return []
+  endif
+  return number >= a:low && number <= a:high ? [number] : []
+endfunction
+
+"a:value as a whole number of any sensible size, or []
+function s:Offset(value)
+  return s:Whole(a:value, -1000000, 1000000)
+endfunction
+
+"a:value, if it is a number or a numeric string
+function s:Seconds(value)
+  let numeric=type(a:value) == v:t_number || type(a:value) == v:t_float
+  if numeric || type(a:value) == v:t_string && a:value =~ '^\d\+\(\.\d\+\)\?$'
+    return [a:value]
+  endif
+  return []
+endfunction
+
+"a:value, if it is a color a highlight group can have, a #RRGGBB one or a name
+function s:ColorOption(value)
+  if type(a:value) != v:t_string
+    return []
+  elseif a:value =~ '^#'
+    return a:value =~? '^#\x\{6}$' ? [a:value] : []
+  elseif a:value !~ '^\a\+$'
+    return []
+  endif
+  try
+    execute 'silent highlight pastelpcheck guibg='.a:value
+    highlight clear pastelpcheck
+  catch
+    return []
+  endtry
+  return [a:value]
+endfunction
+
+"a:value, if it is one of a:allowed
+function s:OneOf(value, allowed)
+  return type(a:value) == v:t_string && index(a:allowed, a:value) >= 0
+\        ? [a:value] : []
+endfunction
+
+"a:value, if it is a list of strings
+function s:Strings(value)
+  if type(a:value) == v:t_list
+\    && empty(filter(copy(a:value), 'type(v:val) != v:t_string'))
+    return [a:value]
+  endif
+  return []
+endfunction
+
+"short, as a longer message in a cursor movement is truncated by the ruler or
+"asks for a keypress
+function s:Warn(message)
+  echohl WarningMsg
+  echom strcharpart(a:message, 0, &columns-22)
+  echohl None
+endfunction
+
+"set g:pastel_<name> to a:default if it is not set, and have it checked by
+"a:Check; a:what says what a valid value is, for the warning
+function s:Define(name, default, Check, what)
+  let s:defaults[a:name]=a:default
+  let s:checks[a:name]=a:Check
+  let s:whats[a:name]=a:what
+  let g:['pastel_'.a:name]=get(g:, 'pastel_'.a:name, a:default)
+endfunction
+
+"the value a:value of the variable a:variable, if valid for the option a:name,
+"else a:fallback, with a warning unless this value was already warned about;
+"it does not say what is used instead, to leave room for what is wrong
+function s:Checked(name, variable, value, fallback)
+  let checked=s:checks[a:name](a:value)
+  if !empty(checked)
+    return checked[0]
+  endif
+  if get(s:invalid, a:variable, '') !=# string(a:value)
+    let s:invalid[a:variable]=string(a:value)
+    call s:Warn('pastel: '.a:variable.' '.strcharpart(string(a:value), 0, 20)
+\               .' is not '.s:whats[a:name])
+  endif
+  return a:fallback
+endfunction
+
+"the value of the option g:pastel_<name>
+function s:Opt(name)
+  return s:Checked(a:name, 'g:pastel_'.a:name,
+\                  get(g:, 'pastel_'.a:name, s:defaults[a:name]),
+\                  s:defaults[a:name])
+endfunction
+
 "options
 "a definition of color blocks to show, from left to right
 "  combination of the following as a string:
@@ -31,7 +138,7 @@ let g:pastel_color_mode=get(g:, 'pastel_color_mode', 'k')
 
 "alternate between backgrounds every n seconds in "2" and "3" blocks, 0.1 or
 "more; less than that turns alternating off, showing the first background
-let g:pastel_color_timer=get(g:, 'pastel_color_timer', 5)
+call s:Define('color_timer', 5, function('s:Seconds'), 'a number')
 
 "a definition of color codes to show, from top to bottom
 "  combination of the following as a string:
@@ -47,34 +154,38 @@ let g:pastel_detail_mode=get(g:, 'pastel_detail_mode', 'x')
 "          one-time note per buffer about the guess
 "4-digit codes are always #RGBA; b:pastel_alpha_position overrides this
 "per buffer
-let g:pastel_alpha_position=get(g:, 'pastel_alpha_position', 'auto')
-let g:pastel_alpha_first_filetypes=get(g:, 'pastel_alpha_first_filetypes',
-\                                      ['java', 'kotlin'])
+call s:Define('alpha_position', 'auto',
+\             {value -> s:OneOf(value, ['auto', 'first', 'last'])},
+\             'auto, first or last')
+call s:Define('alpha_first_filetypes', ['java', 'kotlin'],
+\             function('s:Strings'), 'a list of strings')
 
 "filetypes where no colors are looked for, as glob patterns: sql and its
 "variants for their very long lines, gitcommit where #123 is an issue and not
 "a color; lines longer than 'synmaxcol' are never looked at, if it is not 0
-let g:pastel_ignore_filetypes=get(g:, 'pastel_ignore_filetypes',
-\                                ['gitcommit', '*sql*'])
+call s:Define('ignore_filetypes', ['gitcommit', '*sql*'],
+\             function('s:Strings'), 'a list of strings')
 
 "size is measured vertically in half-chars, horizontally in chars
 "6/2 is how sharkdp/pastel looks
-let g:pastel_color_size=get(g:, 'pastel_color_size', 6)
-let g:pastel_bg_size=get(g:, 'pastel_bg_size', 2)
+call s:Define('color_size', 6, {value -> s:Whole(value, 1, 1000)}, '1..1000')
+call s:Define('bg_size', 2, {value -> s:Whole(value, 0, 1000)}, '0..1000')
 
 "popup placement relative to the color code, in characters; positive means
 "right/below, negative left/above, 0 centered; if the popup would not fit
 "on the screen, the offset is inverted
 "  x: 2 puts the popup's left edge 2 columns after the code's last column
 "  y: 0 centers the popup on the cursor line
-let g:pastel_offset_x=get(g:, 'pastel_offset_x', 2)
-let g:pastel_offset_y=get(g:, 'pastel_offset_y', 0)
+call s:Define('offset_x', 2, function('s:Offset'), 'a whole number')
+call s:Define('offset_y', 0, function('s:Offset'), 'a whole number')
 
 "these are better left alone but you may want to change trans colors
-let g:pastel_white_bg=get(g:, 'pastel_white_bg', '#FFFFFF')
-let g:pastel_trans_fg=get(g:, 'pastel_trans_fg', '#BFBFBF') "75% gray
-let g:pastel_trans_bg=get(g:, 'pastel_trans_bg', '#404040') "25% gray
-let g:pastel_black_bg=get(g:, 'pastel_black_bg', '#000000')
+call s:Define('white_bg', '#FFFFFF', function('s:ColorOption'), 'a color')
+"75% gray
+call s:Define('trans_fg', '#BFBFBF', function('s:ColorOption'), 'a color')
+"25% gray
+call s:Define('trans_bg', '#404040', function('s:ColorOption'), 'a color')
+call s:Define('black_bg', '#000000', function('s:ColorOption'), 'a color')
 
 "the blocks of a g:pastel_color_mode value: a list of rows, each a list of w,
 "k, t, 2 or 3; empty (and a warning is shown) if the value is not supported
@@ -150,8 +261,8 @@ function s:Blend(color, background)
 endfunction
 
 function s:UpdateHex()
-  let s:hex={'k': g:pastel_black_bg, 'w': g:pastel_white_bg,
-\            'd': g:pastel_trans_bg, 'l': g:pastel_trans_fg, 'n': 'NONE'}
+  let s:hex={'k': s:Opt('black_bg'), 'w': s:Opt('white_bg'),
+\            'd': s:Opt('trans_bg'), 'l': s:Opt('trans_fg'), 'n': 'NONE'}
   for background in ['k', 'w', 'd', 'l']
     let s:hex[s:over[background]]=s:Blend(s:color, s:hex[background])
   endfor
@@ -166,8 +277,8 @@ endfunction
 let s:colorkey=''
 
 function s:ColorKey()
-  return join([g:pastel_black_bg, g:pastel_white_bg, g:pastel_trans_bg,
-\              g:pastel_trans_fg])
+  return join([s:Opt('black_bg'), s:Opt('white_bg'), s:Opt('trans_bg'),
+\              s:Opt('trans_fg')])
 endfunction
 
 function s:DefineHighlights()
@@ -206,9 +317,19 @@ function s:SetColor(color)
   endfor
 endfunction
 
+"the margin and the color's size, g:pastel_bg_size and g:pastel_color_size,
+"read once per drawing, as they are needed for every pixel
+let s:margin=0
+let s:inner=0
+
+function s:ReadSizes()
+  let s:margin=s:Opt('bg_size')
+  let s:inner=s:Opt('color_size')
+endfunction
+
 "size of a block in pixels, both ways
 function s:BlockSize()
-  return 2*g:pastel_bg_size+g:pastel_color_size
+  return 2*s:margin+s:inner
 endfunction
 
 "color of pixel (a:x, a:y), counted from 0 from the popup's top left; pixels
@@ -227,8 +348,8 @@ function s:Background(block)
 endfunction
 
 function s:Pixel(x, y)
-  let bg=g:pastel_bg_size
-  let size=g:pastel_color_size
+  let bg=s:margin
+  let size=s:inner
   let block=s:BlockSize()
   let row=a:y / block
   let col=a:x / block
@@ -320,24 +441,25 @@ endfunction
 "whether 8-digit codes in this buffer have the alpha first; if that is
 "guessed, say so once per buffer
 function s:AlphaFirst()
-  let setting=get(b:, 'pastel_alpha_position', g:pastel_alpha_position)
+  let setting=s:Opt('alpha_position')
+  if exists('b:pastel_alpha_position')
+    let setting=s:Checked('alpha_position', 'b:pastel_alpha_position',
+\                         b:pastel_alpha_position, setting)
+  endif
   if setting ==# 'first'
     return 1
   elseif setting !=# 'auto'
     return 0
   endif
   let filetypes=split(&filetype, '\.')
+  let known=s:Opt('alpha_first_filetypes')
   let first=!empty(filter(filetypes,
-\                        'index(g:pastel_alpha_first_filetypes, v:val) >= 0'))
+\                        {_, filetype -> index(known, filetype) >= 0}))
   if !exists('b:pastel_alpha_noted')
     let b:pastel_alpha_noted=1
-    "short, as a longer message in a cursor movement is truncated by the
-    "ruler or asks for a keypress
     let message='pastel: assuming '.(first ? '#AARRGGBB' : '#RRGGBBAA')
 \               .', see README'
-    echohl WarningMsg
-    echom strcharpart(message, 0, &columns-22)
-    echohl None
+    call s:Warn(message)
   endif
   return first
 endfunction
@@ -558,7 +680,7 @@ let s:formats=[
 "before reading the line, which would copy it
 function s:Ignored()
   for filetype in split(&filetype, '\.')
-    for pattern in g:pastel_ignore_filetypes
+    for pattern in s:Opt('ignore_filetypes')
       if filetype =~# glob2regpat(pattern)
         return 1
       endif
@@ -629,18 +751,19 @@ function s:Position(mbeg, mend)
     echohl None
   endif
   let cur=col('.')-1
+  let offset_y=s:Opt('offset_y')
   let [wrow, wcol]=win_screenpos(0)
   let scrcol=wcol+wincol()-1
   let scrrow=wrow+winline()-1
   let first=scrcol-(cur-a:mbeg)
   let [left, fits]=s:Axis(first, scrcol+(a:mend-1-cur), w,
-\                         g:pastel_offset_x, &columns)
+\                         s:Opt('offset_x'), &columns)
   if fits
-    let [top, fits]=s:Axis(scrrow, scrrow, h, g:pastel_offset_y, maxline)
+    let [top, fits]=s:Axis(scrrow, scrrow, h, offset_y, maxline)
   else
     let left=max([1, min([first, &columns-w+1])])
     let [top, fits]=s:Axis(scrrow, scrrow, h,
-\                          g:pastel_offset_y ? g:pastel_offset_y : 1, maxline)
+\                          offset_y ? offset_y : 1, maxline)
   endif
   return {'line': top, 'col': left, 'pos': 'topleft'}
 endfunction
@@ -666,6 +789,7 @@ endfunction
 
 function s:OnTimer(id)
   call s:CheckPopup()
+  call s:ReadSizes()
   if !s:pastel_win || !popup_getpos(s:pastel_win).visible
     call s:StopTimer()
     return
@@ -677,7 +801,7 @@ endfunction
 "run the timer if the layout has alternating blocks and the interval is valid
 "(it is read every time, so changes take effect), else stop it
 function s:UpdateTimer()
-  let ms=float2nr(str2float(string(g:pastel_color_timer))*1000)
+  let ms=float2nr(str2float(string(s:Opt('color_timer')))*1000)
   if ms < 100 || string(s:layout) !~ '[23]'
     call s:StopTimer()
     let s:phase=0
@@ -698,6 +822,7 @@ endfunction
 
 function s:OnCursorMove() abort
   call s:CheckPopup()
+  call s:ReadSizes()
   call s:UpdateLayout()
   if s:ColorKey() !=# s:colorkey
     call s:DefineHighlights()
