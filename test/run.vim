@@ -529,6 +529,92 @@ let g:pastel_color_size=6
 let g:pastel_bg_size=2
 let g:pastel_color_mode='k'
 
+"placement: [start, fits] of a popup of a size on an axis, from the positions
+"[first, last] of the code, an offset and the limits low..high
+let s:Axis=s:Fn('Axis')
+call s:Check('axis: right of the code', s:Axis(10, 16, 10, 2, 1, 80), [18, 1])
+call s:Check('axis: left of the code', s:Axis(40, 46, 10, -2, 1, 80), [29, 1])
+call s:Check('axis: centered', s:Axis(40, 46, 10, 0, 1, 80), [38, 1])
+call s:Check('axis: below', s:Axis(5, 5, 5, 1, 1, 23), [6, 1])
+call s:Check('axis: inverted, as it does not fit', s:Axis(70, 76, 10, 2, 1, 80), [59, 1])
+call s:Check('axis: moved in below the low limit', s:Axis(2, 2, 5, 0, 2, 23), [2, 0])
+call s:Check('axis: moved in above the high limit', s:Axis(22, 22, 5, 0, 1, 22), [18, 0])
+call s:Check('axis: low limit respected when inverting', s:Axis(3, 3, 5, 2, 2, 5), [2, 0])
+call s:Check('axis: above the low limit, so inverted', s:Axis(4, 4, 3, -1, 2, 10), [5, 1])
+
+"the screen columns of a code, in left-to-right and right-to-left windows
+let s:Columns=s:Fn('CodeColumns')
+call s:Check('columns: cursor on the first character', s:Columns(20, 0, 7, 0), [20, 26])
+call s:Check('columns: cursor inside', s:Columns(20, 3, 7, 0), [17, 23])
+call s:Check('columns: right-to-left, on the first character', s:Columns(72, 0, 7, 1), [66, 72])
+call s:Check('columns: right-to-left, inside', s:Columns(72, 2, 7, 1), [68, 74])
+
+"the screen lines the popup may cover: not the tabline, the status line of the
+"last window nor the command line
+silent! only!
+let s:Rows=s:Fn('Rows')
+let s:base=&lines-&cmdheight
+set showtabline=0 laststatus=0
+call s:Check('rows: nothing in the way', s:Rows(), [1, s:base])
+set showtabline=2
+call s:Check('rows: tabline always shown', s:Rows(), [2, s:base])
+set showtabline=1
+call s:Check('rows: tabline only with several tab pages, one', s:Rows(), [1, s:base])
+tabnew
+call s:Check('rows: tabline with two tab pages', s:Rows(), [2, s:base])
+tabclose
+set laststatus=2
+call s:Check('rows: status line always shown', s:Rows(), [1, s:base-1])
+set laststatus=1
+call s:Check('rows: status line only with several windows, one', s:Rows(), [1, s:base])
+split
+call s:Check('rows: status line with two windows', s:Rows(), [1, s:base-1])
+close
+set laststatus=3
+call s:Check('rows: global status line', s:Rows(), [1, s:base-1])
+set showtabline=1 laststatus=1
+
+"nothing is looked for in a closed fold, where the code is not displayed
+enew!
+call setline(1, ['a', 'foo #fff', 'c', 'd'])
+setlocal foldmethod=manual
+2,3fold
+call cursor(2, 6)
+call s:Check('closed fold: no color', s:Fn('ColorAtCursor')(), [])
+normal! zo
+call s:Check('open fold: a color', len(s:Fn('ColorAtCursor')()), 3)
+
+"folds are closed and opened without the cursor moving: the popup follows when
+"Vim is idle
+let g:pastel_color_mode='k'
+call s:Fn('OnCursorMove')()
+let s:popup=popup_list()[0]
+call s:Check('fold: popup shown on the code', popup_getpos(s:popup).visible, 1)
+normal! zc
+call s:Fn('OnSafeState')()
+call s:Check('fold closed: popup hidden', popup_getpos(s:popup).visible, 0)
+call s:Fn('OnSafeState')()
+call s:Check('fold still closed: popup still hidden', popup_getpos(s:popup).visible, 0)
+normal! zo
+call s:Fn('OnSafeState')()
+call s:Check('fold opened: popup shown', popup_getpos(s:popup).visible, 1)
+
+"concealed text on the line makes the screen column wrong until the redraw, so
+"the popup is placed once more then, with one timer however often it moves
+setlocal foldmethod=manual
+let s:timers=len(timer_info())
+setlocal conceallevel=0
+call s:Fn('OnCursorMove')()
+call s:Check('no concealing: no timer', len(timer_info()), s:timers)
+setlocal conceallevel=2
+call s:Fn('OnCursorMove')()
+call s:Fn('OnCursorMove')()
+call s:Check('concealing: one timer', len(timer_info()), s:timers+1)
+sleep 100m
+call s:Check('concealing: the timer is done', len(timer_info()), s:timers)
+call s:Check('concealing: the popup is still shown', popup_getpos(s:popup).visible, 1)
+setlocal conceallevel=0
+
 "print the results, which :print does to the standard output in Ex mode
 function s:Report(lines)
   enew!
