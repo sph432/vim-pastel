@@ -14,8 +14,9 @@ endif
 let s:pastel_win=0
 let s:warned=0
 
-"options are read every time they are used, so changes take effect at once; an
-"invalid value is warned about, once per value, and the default is used
+"options are read every time they are used, so changes take effect at once; all
+"but the layout and the colors can be overridden per buffer by b:pastel_<name>;
+"an invalid value is warned about, once per value, and the default is used
 "instead, as s:Opt(name) does; the checks return [value] or [] if invalid
 let s:defaults={}
 let s:checks={}
@@ -114,11 +115,22 @@ function s:Checked(name, variable, value, fallback)
   return a:fallback
 endfunction
 
-"the value of the option g:pastel_<name>
+"the options that b:pastel_<name> overrides in a buffer; not the layout and
+"the colors, as there is only one popup, shared by all buffers
+let s:buffer_local=['alpha_position', 'alpha_first_filetypes',
+\                   'ignore_filetypes', 'color_timer', 'color_size',
+\                   'bg_size', 'offset_x', 'offset_y']
+
+"the value of the option g:pastel_<name>, or of b:pastel_<name> if the buffer
+"has a valid one; an invalid one leaves the global value in effect
 function s:Opt(name)
-  return s:Checked(a:name, 'g:pastel_'.a:name,
-\                  get(g:, 'pastel_'.a:name, s:defaults[a:name]),
-\                  s:defaults[a:name])
+  let value=s:Checked(a:name, 'g:pastel_'.a:name,
+\                     get(g:, 'pastel_'.a:name, s:defaults[a:name]),
+\                     s:defaults[a:name])
+  if exists('b:pastel_'.a:name) && index(s:buffer_local, a:name) >= 0
+    return s:Checked(a:name, 'b:pastel_'.a:name, b:['pastel_'.a:name], value)
+  endif
+  return value
 endfunction
 
 "options
@@ -152,8 +164,7 @@ let g:pastel_detail_mode=get(g:, 'pastel_detail_mode', 'x')
 "  first - #AARRGGBB, as in Android
 "  auto  - first in the filetypes listed below, last in the others, with a
 "          one-time note per buffer about the guess
-"4-digit codes are always #RGBA; b:pastel_alpha_position overrides this
-"per buffer
+"4-digit codes are always #RGBA
 call s:Define('alpha_position', 'auto',
 \             {value -> s:OneOf(value, ['auto', 'first', 'last'])},
 \             'auto, first or last')
@@ -442,10 +453,6 @@ endfunction
 "guessed, say so once per buffer
 function s:AlphaFirst()
   let setting=s:Opt('alpha_position')
-  if exists('b:pastel_alpha_position')
-    let setting=s:Checked('alpha_position', 'b:pastel_alpha_position',
-\                         b:pastel_alpha_position, setting)
-  endif
   if setting ==# 'first'
     return 1
   elseif setting !=# 'auto'
