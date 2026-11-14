@@ -75,6 +75,9 @@ Lines longer than `'synmaxcol'` (3000 by default, 0 meaning no limit) are not
 searched, as that would slow down moving the cursor in eg. minified or
 machine-generated files: it takes seconds on a line of millions of characters.
 
+No color is previewed for a code in a closed fold, as it is not displayed
+there.
+
 ## Scrolling
 In Vims that have the `WinScrolled` event (8.2.4713 and newer), the popup
 follows the code when the window is scrolled. SEE Known issues for older
@@ -84,6 +87,9 @@ versions.
 - In Vims older than 8.2.4713, which lack the `WinScrolled` event, the popup
     is only updated on cursor movement; scrolling the window without moving
     the cursor leaves the popup at its old position on the screen.
+- In Vims older than 8.2.0325, which lack the `SafeState` event, closing or
+    opening a fold without moving the cursor leaves the popup as it was until
+    the cursor moves.
 - In Vims older than 8.1.1580, which lack popup masks, the area of a layout
     that no block covers (eg. right of the shorter row of `'wk|t'`) hides the
     text under it, instead of being transparent. A single row of blocks is not
@@ -167,12 +173,13 @@ given as strings, eg. `'6'`.
 The colors are `#RRGGBB` ones or color names Vim knows, eg. `'red'` or
 `'NONE'`.
 
-If the popup does not fit on the screen at the requested offset, the offset is
-inverted along that axis (eg. `2` becomes `-2`). If there is no room on either
-side of the code, the popup is placed below the code's line instead, or above
-it if the vertical offset is negative or there is no room below; the vertical
-offset is used for the distance, or `1` if it is `0`. If it fits nowhere, it is
-moved onto the screen as far as possible.
+The popup does not cover the tabline, the status line of the last window or the
+command line. If the popup does not fit on the screen at the requested offset,
+the offset is inverted along that axis (eg. `2` becomes `-2`). If there is no
+room on either side of the code, the popup is placed below the code's line
+instead, or above it if the vertical offset is negative or there is no room
+below; the vertical offset is used for the distance, or `1` if it is `0`. If it
+fits nowhere, it is moved onto the screen as far as possible.
 
 A popup larger than the screen is clipped, not wrapped, and a warning is shown
 once; only the part on the screen is drawn.

@@ -47,6 +47,8 @@ CONTENTS                                                     *pastel-contents*
 
     Lines longer than 'synmaxcol' (0 means no limit) are not searched, as that
     would slow down moving the cursor in minified or machine-generated files.
+    No color is previewed for a code in a closed fold, as it is not displayed
+    there.
 
 ==============================================================================
 4. OPTIONS                                                    *pastel-options*
@@ -129,10 +131,11 @@ g:pastel_offset_y  (default 0)                             *g:pastel_offset_y*
     Vertical placement relative to the cursor line, in lines: positive is
     below, negative is above, 0 is centered on the line.
 
-    If the popup does not fit on the screen at the requested offset, the
-    offset is inverted, eg. 2 becomes -2. With no room on either side of the
-    code, the popup goes below the line, or above it. A popup larger than the
-    screen is clipped, and a warning is shown once.
+    The popup does not cover the tabline, the status line of the last window
+    or the command line. If it does not fit on the screen at the requested
+    offset, the offset is inverted, eg. 2 becomes -2. With no room on either
+    side of the code, the popup goes below the line, or above it. A popup
+    larger than the screen is clipped, and a warning is shown once.
 
 g:pastel_black_bg  (default "#000000")                     *g:pastel_black_bg*
     The color of the black background: #RRGGBB, or a color name Vim knows.
@@ -149,6 +152,9 @@ g:pastel_trans_bg  (default "#404040")                     *g:pastel_trans_bg*
 ==============================================================================
 5. KNOWN ISSUES                                                *pastel-issues*
 
+    - In Vims older than 8.2.0325, which lack the |SafeState| event, closing
+      or opening a fold without moving the cursor leaves the popup as it was
+      until the cursor moves.
     - In Vims older than 8.2.4713, which lack the |WinScrolled| event,
       scrolling the window without moving the cursor leaves the popup at its
       old position on the screen.
