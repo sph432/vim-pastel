@@ -383,6 +383,11 @@ endfunction
 "  t - color on checkered "transparent" background
 "  2 - k and w alternating
 "  3 - k, t and w alternating (in that order)
+"  d - details: text, SEE g:pastel_detail_format; d cells next to each other
+"      are one region, which must be a rectangle, and grows to the right and
+"      down, if there is room, to fit its text
+"  . - separates what is on its two sides: d cells there are not one region;
+"      it has no size; a row of it alone, between rows, is an unsized row
 "  | - put the blocks following it in a new row
 "
 "blocks are of the same size (see below), each with its own margin
@@ -439,21 +444,119 @@ call s:Define('trans_fg', '#BFBFBF', function('s:ColorOption'), 'a color')
 call s:Define('trans_bg', '#404040', function('s:ColorOption'), 'a color')
 call s:Define('black_bg', '#000000', function('s:ColorOption'), 'a color')
 
-"the blocks of a g:pastel_color_mode value: a list of rows, each a list of w,
-"k, t, 2 or 3; empty (and a warning is shown) if the value is not supported
+"[regions, owners, why] of the d cells of a layout: the regions are lists of
+"their [row, column] cells in reading order, as {'id', 'r0', 'c0', 'r1', 'c1'}
+"rectangles, the owners are the region numbers by 'row,column' of their
+"cells; cells in contact, not through a break (a:hbreak[row][column] is
+"whether there is one after the cell, a:vbreak[row] whether there is one
+"before the row), are one region; why is '' if they are all rectangles
+function s:Regions(rows, hbreak, vbreak)
+  let regions=[]
+  let owners={}
+  for row in range(len(a:rows))
+    for col in range(len(a:rows[row]))
+      if a:rows[row][col] !=# 'd' || has_key(owners, row.','.col)
+        continue
+      endif
+      let id=len(regions)+1
+      let cells=[]
+      let todo=[[row, col]]
+      let owners[row.','.col]=id
+      while !empty(todo)
+        let [r, c]=remove(todo, -1)
+        call add(cells, [r, c])
+        let next=[]
+        if c+1 < len(a:rows[r]) && !a:hbreak[r][c]
+          call add(next, [r, c+1])
+        endif
+        if c > 0 && !a:hbreak[r][c-1]
+          call add(next, [r, c-1])
+        endif
+        if r+1 < len(a:rows) && c < len(a:rows[r+1]) && !a:vbreak[r+1]
+          call add(next, [r+1, c])
+        endif
+        if r > 0 && c < len(a:rows[r-1]) && !a:vbreak[r]
+          call add(next, [r-1, c])
+        endif
+        for [nr, nc] in next
+          if a:rows[nr][nc] ==# 'd' && !has_key(owners, nr.','.nc)
+            let owners[nr.','.nc]=id
+            call add(todo, [nr, nc])
+          endif
+        endfor
+      endwhile
+      let rs=map(copy(cells), 'v:val[0]')
+      let cs=map(copy(cells), 'v:val[1]')
+      let region={'id': id, 'r0': min(rs), 'c0': min(cs), 'r1': max(rs),
+\                 'c1': max(cs)}
+      if len(cells) != (region.r1-region.r0+1)*(region.c1-region.c0+1)
+        return [[], {}, 'the d cells from row '.(region.r0+1).', column '
+\               .(region.c0+1).' are not a rectangle; separate them with a .'
+\               .' or a row of only .']
+      endif
+      call add(regions, region)
+    endfor
+  endfor
+  return [regions, owners, '']
+endfunction
+
+"the layout of a g:pastel_color_mode value, as a dict: 'rows' are the cells of
+"each row, a list of w, k, t, 2, 3 and d, 'regions' and 'owners' those of the
+"d cells (SEE s:Regions), 'hbreak' and 'vbreak' the breaks (the same), and
+"'alternating' whether there are 2 or 3 cells; empty (and a warning is shown)
+"if the value is not supported
 function s:ParseLayout(mode)
-  if string(a:mode) !~# '^''[wkt23]\+\(|[wkt23]\+\)*''$'
-    echohl WarningMsg
-    echom 'pastel: unsupported g:pastel_color_mode '.string(a:mode)
-\         .', only w, k, t, 2, 3 and | (not leading, trailing or doubled)'
-\         .' are supported'
+  let why=''
+  if string(a:mode) !~# '^''[wkt23d.]\+\(|[wkt23d.]\+\)*''$'
+    let why=', only w, k, t, 2, 3, d, . and | (not leading, trailing or'
+\          .' doubled) are supported'
     if string(a:mode) =~# 'b'
-      echom 'pastel: the black block was renamed from b to k'
+      let why.=' (the black block was renamed from b to k)'
     endif
-    echohl None
-    return []
+  else
+    let lines=split(a:mode, '|')
+    if lines[0] =~# '^\.\+$' || lines[-1] =~# '^\.\+$'
+      let why=', a row of only . cannot be the first or the last'
+    endif
   endif
-  return map(split(a:mode, '|'), 'split(v:val, ''\zs'')')
+  if why ==# ''
+    let rows=[]
+    let hbreak=[]
+    let vbreak=[]
+    let pending=0
+    for line in split(a:mode, '|')
+      if line =~# '^\.\+$'
+        let pending=1
+        continue
+      endif
+      let cells=[]
+      let breaks=[]
+      for char in split(line, '\zs')
+        if char !=# '.'
+          call add(cells, char)
+          call add(breaks, 0)
+        elseif !empty(breaks)
+          let breaks[-1]=1
+        endif
+      endfor
+      call add(rows, cells)
+      call add(hbreak, breaks)
+      call add(vbreak, pending)
+      let pending=0
+    endfor
+    let [regions, owners, why]=s:Regions(rows, hbreak, vbreak)
+    if why !=# ''
+      let why=', '.why
+    else
+      return {'rows': rows, 'regions': regions, 'owners': owners,
+\              'hbreak': hbreak, 'vbreak': vbreak,
+\              'alternating': string(rows) =~# '[23]'}
+    endif
+  endif
+  echohl WarningMsg
+  echom 'pastel: unsupported g:pastel_color_mode '.string(a:mode).why
+  echohl None
+  return {}
 endfunction
 
 let s:layout=s:ParseLayout(g:pastel_color_mode)
@@ -479,7 +582,8 @@ endfunction
 "a line high; each pixel has one of these colors:
 "  k - black, w - white, d - dark and l - light checker,
 "  1, 2, 3 and 4 - the color shown, on the background k, w, d or l,
-"  n - none, the default color, only used to pad an odd height to full lines
+"  n - none, the default color, only used to pad an odd height to full lines,
+"  e - the same, but in a detail region, so it is not transparent
 "a character cell is 2 pixels high, drawn as a space if both have the same
 "color and as an upper half block (fg: upper, bg: lower) if they differ
 let s:colors=['k', 'w', 'd', 'l', '1', '2', '3', '4', 'n']
@@ -514,7 +618,8 @@ endfunction
 
 function s:UpdateHex()
   let s:hex={'k': s:Opt('black_bg'), 'w': s:Opt('white_bg'),
-\            'd': s:Opt('trans_bg'), 'l': s:Opt('trans_fg'), 'n': 'NONE'}
+\            'd': s:Opt('trans_bg'), 'l': s:Opt('trans_fg'), 'n': 'NONE',
+\            'e': 'NONE'}
   for background in ['k', 'w', 'd', 'l']
     let s:hex[s:over[background]]=s:Blend(s:color, s:hex[background])
   endfor
@@ -534,6 +639,7 @@ function s:ColorKey()
 endfunction
 
 function s:DefineHighlights()
+  highlight default link PastelDetail Normal
   let s:colorkey=s:ColorKey()
   call s:UpdateHex()
   for upper in s:colors
@@ -551,6 +657,7 @@ function s:SetupPopupHilightStyles()
       call prop_type_add(name, {'highlight': name})
     endfor
   endfor
+  call prop_type_add('pasteldetail', {'highlight': 'PastelDetail'})
 endfunction
 
 "make a:color, a [red, green, blue, alpha] list, the color shown
@@ -600,17 +707,22 @@ function s:Background(block)
 endfunction
 
 function s:Pixel(x, y)
+  for area in s:frame.areas
+    if a:x >= area[0] && a:x < area[1] && a:y >= area[2] && a:y < area[3]
+      return 'e'
+    endif
+  endfor
   let bg=s:margin
   let size=s:inner
   let block=s:BlockSize()
   let row=a:y / block
   let col=a:x / block
-  if row >= len(s:layout) || col >= len(s:layout[row])
+  if row >= len(s:layout.rows) || col >= len(s:layout.rows[row])
     return 'n'
   endif
   let x=a:x % block
   let y=a:y % block
-  let background=s:Background(s:layout[row][col])
+  let background=s:Background(s:layout.rows[row][col])
   if background == 't'
     let pixel=(x+y) % 2 ? 'd' : 'l'
   else
@@ -622,12 +734,159 @@ function s:Pixel(x, y)
   return pixel
 endfunction
 
+"what is shown for the detail regions, as built by s:BuildFrame: the regions,
+"the pixel rectangles [x0, x1, y0, y1) they cover, the popup's size
+let s:frame={'regions': [], 'areas': [], 'width': 0, 'lines': 0}
+"the text of the color code the frame was built for
+let s:detail_text=''
+
 "[columns, lines] of the popup; an odd height in pixels gets an extra row of
-"default colored pixels at the bottom
+"default colored pixels at the bottom, and the detail regions may have made
+"it larger
 function s:Size()
-  let width=max(map(copy(s:layout), 'len(v:val)'))*s:BlockSize()
-  let height=len(s:layout)*s:BlockSize()
-  return [width, (height+1)/2]
+  return [s:frame.width, s:frame.lines]
+endfunction
+
+"the text of a:line cut to fit a:width cells, with an ellipsis if it was cut
+function s:Ellipsize(line, width)
+  if strdisplaywidth(a:line) <= a:width
+    return a:line
+  endif
+  return a:width > 0 ? strcharpart(a:line, 0, a:width-1).'…' : ''
+endfunction
+
+"the lines of a:segments, the lines of a template expanded, each a list of
+"segments, as fit a:width cells: segments are put on a line as long as they
+"fit, so a line is only broken where it is permitted
+function s:Wrap(segments, width)
+  let lines=[]
+  for line in a:segments
+    let current=''
+    for segment in line
+      if current ==# ''
+        let current=segment
+      elseif strdisplaywidth(current)+strdisplaywidth(segment) <= a:width
+        let current.=segment
+      else
+        call add(lines, current)
+        let current=segment
+      endif
+    endfor
+    call add(lines, current)
+  endfor
+  return map(lines, 's:Ellipsize(v:val, a:width)')
+endfunction
+
+"the template of the detail region number a:id of a:count: the one of
+"g:pastel_detail_format if it is a string and the region the first, or the
+"entry of the list, else the one telling the number and the color
+function s:RegionTemplate(id, count)
+  let format=s:Opt('detail_format')
+  if type(format) == v:t_string
+    return a:id == 1 ? format : s:fallback
+  endif
+  return a:id <= len(format) ? format[a:id-1] : s:fallback
+endfunction
+
+"the frame for the code a:text of the color a:color: what the detail regions
+"show and how large they are, as a dict, SEE s:frame
+"a region has as much room as the cells it is made of, in whole lines: those
+"of which both pixels are in the cells, so not one shared with another row;
+"where the text needs more, it grows to the right, as far as it needs, into
+"what is not covered by a cell or another region (including what the padding
+"of an odd height leaves), then down likewise, all the regions to the right
+"before any is grown down, each in reading order, but not past a break; it is
+"cut, with an ellipsis, where it can not grow
+function s:BuildFrame(color, text)
+  let rows=s:layout.rows
+  let block=s:BlockSize()
+  let frame={'regions': [], 'areas': [],
+\           'width': max(map(copy(rows), 'len(v:val)'))*block,
+\           'lines': (len(rows)*block+1)/2}
+  if empty(s:layout.regions)
+    return frame
+  endif
+  "[x0, x1, y0, y1, owner] rectangles in pixels that are taken, owner being
+  "the number of the region (0 for the other cells)
+  let claims=[]
+  for row in range(len(rows))
+    for col in range(len(rows[row]))
+      call add(claims, [col*block, (col+1)*block, row*block, (row+1)*block,
+\                       get(s:layout.owners, row.','.col, 0)])
+    endfor
+  endfor
+  let total=len(s:layout.regions)
+  for region in s:layout.regions
+    let y1=(region.r1+1)*block
+    call add(frame.regions, {'id': region.id, 'x0': region.c0*block,
+\      'x1': (region.c1+1)*block, 'y0': region.r0*block, 'y1': y1,
+\      'ks': (region.r0*block+1)/2,
+\      'ke': y1/2,
+\      'segments': s:Expand(s:RegionTemplate(region.id, total), a:color,
+\                           a:text, region.id)})
+  endfor
+  "to the right, as far as the longest piece of the text that can not be broken
+  for reg in frame.regions
+    let need=0
+    for line in reg.segments
+      for segment in line
+        let need=max([need, strdisplaywidth(segment)])
+      endfor
+    endfor
+    let grow=need-(reg.x1-reg.x0)
+    let region=s:layout.regions[reg.id-1]
+    for row in range(region.r0, region.r1)
+      if s:layout.hbreak[row][region.c1]
+        let grow=0
+      endif
+    endfor
+    for claim in claims
+      if grow > 0 && claim[4] != reg.id && claim[0] >= reg.x1
+\       && claim[2] < reg.y1 && claim[3] > reg.y0
+        let grow=min([grow, claim[0]-reg.x1])
+      endif
+    endfor
+    if grow > 0
+      call add(claims, [reg.x1, reg.x1+grow, reg.y0, reg.y1, reg.id])
+      let reg.x1+=grow
+    endif
+    let reg.lines=s:Wrap(reg.segments, reg.x1-reg.x0)
+  endfor
+  "then down, as far as the lines need
+  for reg in frame.regions
+    let more=len(reg.lines)-max([reg.ke-reg.ks, 0])
+    let edge=2*reg.ke
+    let below=s:layout.regions[reg.id-1].r1+1
+    if below < len(rows) && s:layout.vbreak[below]
+      let more=0
+    endif
+    for claim in claims
+      if more > 0 && claim[4] != reg.id && claim[2] >= edge
+\       && claim[0] < reg.x1 && claim[1] > reg.x0
+        let more=min([more, claim[2]/2-reg.ke])
+      endif
+    endfor
+    if more > 0
+      call add(claims, [reg.x0, reg.x1, edge, edge+2*more, reg.id])
+      let reg.ke+=more
+    endif
+    let fit=max([reg.ke-reg.ks, 0])
+    if len(reg.lines) > fit
+      let reg.lines=fit > 0 ? reg.lines[:fit-1] : []
+      if fit > 0
+        let reg.lines[-1]=s:Ellipsize(reg.lines[-1].'…', reg.x1-reg.x0)
+      endif
+    endif
+    let frame.lines=max([frame.lines, reg.ke])
+  endfor
+  for claim in claims
+    if claim[4] > 0
+      call add(frame.areas, claim[:3])
+      let frame.width=max([frame.width, claim[1]])
+      let frame.lines=max([frame.lines, (claim[3]+1)/2])
+    endif
+  endfor
+  return frame
 endfunction
 
 "popup masks, which make the area no block covers transparent, need this;
@@ -657,14 +916,32 @@ function s:SetPopupContent(popup)
   let popuptext=[]
   let mask=[]
   for line in range(lines)
+    "the characters of the detail regions' text on this line, by column
+    let detail={}
+    for reg in s:frame.regions
+      if line >= reg.ks && line < reg.ke
+        let chars=split(get(reg.lines, line-reg.ks, ''), '\zs')
+        for x in range(max([0, min([reg.x1, width])-reg.x0]))
+          let detail[reg.x0+x]=get(chars, x, ' ')
+        endfor
+      endif
+    endfor
     let text=''
     let props=[]
     let runstart=0
     for x in range(width)
-      let upper=s:Pixel(x, 2*line)
-      let lower=s:Pixel(x, 2*line+1)
-      let char=s:hex[upper] ==? s:hex[lower] ? ' ' : '▀'
-      let type='pastelp'.upper.lower
+      if has_key(detail, x)
+        let char=detail[x]
+        let type='pasteldetail'
+        let blank=0
+      else
+        let upper=s:Pixel(x, 2*line)
+        let lower=s:Pixel(x, 2*line+1)
+        let char=s:hex[upper] ==? s:hex[lower] ? ' ' : '▀'
+        let type='pastelp'.(upper ==# 'e' ? 'n' : upper)
+\                        .(lower ==# 'e' ? 'n' : lower)
+        let blank=upper == 'n' && lower == 'n'
+      endif
       if !empty(props) && props[-1].type == type
         let props[-1].length+=len(char)
       else
@@ -672,7 +949,7 @@ function s:SetPopupContent(popup)
 \                        'type': type})
       endif
       let text.=char
-      if upper == 'n' && lower == 'n'
+      if blank
         let runstart=runstart ? runstart : x+1
       elseif runstart
         call s:AddEmptyCells(mask, line+1, runstart, x)
@@ -1066,6 +1343,7 @@ endfunction
 function s:OnTimer(id)
   call s:CheckPopup()
   call s:ReadSizes()
+  let s:frame=s:BuildFrame(s:color, s:detail_text)
   if !s:pastel_win || !popup_getpos(s:pastel_win).visible
     call s:StopTimer()
     return
@@ -1078,7 +1356,7 @@ endfunction
 "(it is read every time, so changes take effect), else stop it
 function s:UpdateTimer()
   let ms=float2nr(str2float(string(s:Opt('color_timer')))*1000)
-  if ms < 100 || string(s:layout) !~ '[23]'
+  if ms < 100 || !s:layout.alternating
     call s:StopTimer()
     let s:phase=0
   elseif !s:timer || ms != s:timer_ms
@@ -1123,6 +1401,8 @@ function s:Update(again) abort
     call s:Hide()
   else
     call s:SetColor(hit[0])
+    let s:detail_text=strpart(getline('.'), hit[1], hit[2]-hit[1])
+    let s:frame=s:BuildFrame(hit[0], s:detail_text)
     let pos=s:Position(hit[1], hit[2])
     if s:pastel_win
       call popup_show(s:pastel_win)
