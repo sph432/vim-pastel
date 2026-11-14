@@ -674,11 +674,15 @@ let s:formats=[
 "[color, start, end] of the color code under the cursor, the start and end
 "being the byte range of the code in the line, or []; if several overlap,
 "the first one, and of those the longest
-"whether not to look for colors on the current line: in the filetypes matching
-"g:pastel_ignore_filetypes, and on lines longer than 'synmaxcol', as looking
-"through a very long line at every cursor movement would be slow; checked
-"before reading the line, which would copy it
+"whether not to look for colors on the current line: in a closed fold, in the
+"filetypes matching g:pastel_ignore_filetypes, and on lines longer than
+"'synmaxcol', as looking through a very long line at every cursor movement
+"would be slow; checked before reading the line, which would copy it
 function s:Ignored()
+  "the code is not displayed in a closed fold
+  if foldclosed('.') >= 0
+    return 1
+  endif
   for filetype in split(&filetype, '\.')
     for pattern in s:Opt('ignore_filetypes')
       if filetype =~# glob2regpat(pattern)
@@ -869,6 +873,19 @@ function s:OnCursorMove() abort
   endif
 endfunction
 
+"folds are closed and opened without the cursor moving, which no event tells
+"about, so whether the cursor line is in a closed fold is checked whenever Vim
+"is idle, if it has the event
+let s:folded=0
+
+function s:OnSafeState() abort
+  let folded=foldclosed('.') >= 0
+  if folded != s:folded
+    let s:folded=folded
+    call s:OnCursorMove()
+  endif
+endfunction
+
 call s:SetupPopupHilightStyles()
 
 augroup pastel
@@ -877,9 +894,12 @@ augroup pastel
   autocmd InsertEnter,BufLeave,WinLeave * call s:Hide()
   autocmd InsertLeave,WinEnter * call s:OnCursorMove()
   autocmd ColorScheme * call s:DefineHighlights()
-  "the event is not available in older Vims
+  "the events are not available in older Vims
   if exists('##WinScrolled')
     autocmd WinScrolled * call s:OnCursorMove()
+  endif
+  if exists('##SafeState')
+    autocmd SafeState * call s:OnSafeState()
   endif
 augroup end
 
