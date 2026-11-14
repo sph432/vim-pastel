@@ -100,19 +100,19 @@
 - CSS `rgb()`, `rgba()`, `hsl()` and `hsla()`, in the comma and the space
     and `/` notations, with numbers, percentages, angle units and `none`
 
-## 0.6.2 (planned)
+# 0.7 - robustness
+## 0.7.0 (planned)
 #### Added
 - `hwb()` and `hwba()` (in the space and slash notation, as in CSS), and the
     Less `hsv()` and `hsva()`
-
-## 0.6.3 (planned)
-#### Added
-- Colors in Sass and Less functions with a color argument, eg.
-    `rgba(#fff, 0.5)`
 - `g:pastel_ignore_filetypes`, the filetypes where no colors are looked for,
-    as glob patterns; `gitcommit` and `*sql*` by default
+    as glob patterns
 
 #### Changed
+- No colors are looked for in the `gitcommit` and `*sql*` filetypes by
+    default, where `#123` is an issue and not a color, and where lines can be
+    very long. BREAKING: previews no longer appear there; set
+    `g:pastel_ignore_filetypes` to `[]` to get them back
 - Invalid option values (eg. a float or a list for a size, a color Vim does
     not know, `'FIRST'` for `g:pastel_alpha_position`) are warned about, once
     per value, and the option's default is used instead; `g:pastel_color_size`
@@ -125,6 +125,18 @@
     as an option's value
 - Vim hanging with very large sizes: only the part of the popup on the screen
     is drawn
+- Popup covering the tabline, or the status line of the last window
+- Popup overlapping the code in right-to-left windows (`'rightleft'`)
+- Popup shown for a code in a closed fold, where it is not displayed; it now
+    follows the fold being closed and opened (Vim 8.2.0325 and newer, which
+    have `SafeState`; older versions update it on the next cursor movement)
+- Popup far from the code when text on the line is concealed
+
+# 0.8 - preprocessor colors (planned)
+## 0.8.0 (planned)
+#### Added
+- Colors in Sass and Less functions with a color argument, eg.
+    `rgba(#fff, 0.5)`
 
 # 1.x - color spaces (planned)
 #### Added
