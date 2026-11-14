@@ -188,7 +188,9 @@
     sequence may be written with a real escape character, `\e`, `\033`,
     `\x1b`, `^[`, or without any (`38;2;255;136;0`). The color space tag of
     T.416 (the empty element after `2`, `3` or `4` in the colon form) is
-    accepted and ignored for now. The indexed form (`38:5:n`) is not planned
+    accepted and ignored for now. The indexed form (`38:5:n`, `38;5;n`) is
+    not a color by itself, as OSC 4 can set what the indexes are, so it is
+    not shown; the default palette may be added later, as a named palette
 - This is the first notation with CMY and CMYK, which also gives `%{cmyk}`
     and a `cmy` model for templates a notation to be read back as
 
@@ -196,10 +198,14 @@
 Pastel's commands that change a color, working on the color under the cursor
 and rewriting it in place, in its own notation, or in another one. They need
 the models of the templates to give the same color back (SEE
-`g:pastel_detail_format`) and a decision on where results go.
+`g:pastel_detail_format`).
+
+Undecided, for all of them but `pick` most of all: where the result goes (over
+the color in the buffer, into a register, or only shown in the popup) and in
+which notation (that of the original, or a chosen one). This is to be decided
+once, for the whole group, before any of them is built.
 #### Added
-- `pick`: choose a color and insert it; undecided: into the buffer or a
-    register, and in which format
+- `pick`: choose a color and insert it
 - `complement`, `rotate` (the hue), `lighten` and `darken`, `saturate` and
     `desaturate` (`to-gray` of pastel is the latter taken to the end)
 - `format`: rewrite the color in another notation, eg. from `#ff8800` to
@@ -212,8 +218,8 @@ the models of the templates to give the same color back (SEE
 - `mix`, `gradient`, `distinct` and `random`
 - `colorblind` (simulation of color vision deficiencies) and `textcolor`
     (the readable black or white for a background)
-- Some of these, eg. `gradient` and `distinct`, need to produce several
-    colors, so where results go (SEE 0.11.0) matters more
+- Where results go and in which notation (SEE 0.11) applies to these as well;
+    `gradient` and `distinct` produce several colors, so it matters more
 
 # 0.x - several popups (planned)
 #### Added
