@@ -77,6 +77,56 @@ machine-generated files: it takes seconds on a line of millions of characters.
 No color is previewed for a code in a closed fold, as it is not displayed
 there.
 
+## Detail text
+The `d` cells of `g:pastel_color_mode` show text about the color, as given by
+`g:pastel_detail_format`. A `d` is as large as a block, 10 columns by 5 lines
+by default, so `'d'` is just the text, `'t|d'` has it below a checkered block
+and `'td'` beside it. Details in a row or column are one region (it has to be a
+rectangle): `'dd'` is one region of two cells. A `.` between cells keeps them
+apart, so `'d.d'` is two regions, and a row of only `.` between rows does the
+same for the rows above and below it; `.` takes no room. The regions are
+numbered in reading order, by their first cell: in `'td|d.d'` the `d` right of
+`t` and the one below it are region 1, the other `d` is region 2. A region
+has to be a rectangle: `'td|dd'` is not valid, write `'td|.|dd'` (a region
+above one of two cells) or `'td|d.d'` instead.
+
+A region has as much room as its cells, in whole lines. If its text needs more,
+it takes it, to the right first, then down, if there is nothing there: not a
+block, nor another region, nor a `.` or a row of only `.` on the way. If it can
+not grow, a line that is too long is cut and ends in `…`, and so does the last
+line if there are too many. Regions grow in reading order, but all to the right
+before any down, so in `'td|d'` the second region, if it needs the width, gets
+the cell under the first before it. Where a line may be broken (`%N`) it is, if
+it does not fit, instead of growing.
+
+The format is a string, for the first region, or a list of strings, one for
+each region. A region with none shows its number and the color: `Region 2`, and
+`#ff8800` below it. The format is text with these `%` items:
+
+| item | |
+|---|---|
+| `%r` `%g` `%b` | the red, green and blue, 0 to 255 |
+| `%a` | the alpha, 0 to 1 |
+| `%x` `%X` | `#rrggbb` and, if the alpha is not 1, `aa`; lower, upper case |
+| `%t` | the color code as written in the buffer |
+| `%{id}` | the number of the region |
+| `%n` | a line break |
+| `%N` | where a line may be broken if too long; a space never is |
+| `%%` | a `%` |
+
+For instance `rgb(%r %g %b)`, or `'%x%n%r:p %g:p %b:p%nin the buffer: %t'`.
+Numbers take modifiers after a colon, which can be combined: `p` is a percent
+(`%r:p` is `50%`), `P` is that without the `%`, `f` a fraction (`0.5`), `x` and
+`X` two hex digits, and `.N` is the number of decimals of the percent or the
+fraction (`%r:p:.1` is `49.8%`); `o` leaves out an alpha of 1, and `a` makes
+`%x` always have it. A colon and a letter after an item are always a modifier;
+to have them as text, put the item in braces, `%{r}:x`.
+
+Everything not listed is reserved, as are `%#`, `%*`, `%(`, `%)` and the names
+of the color spaces (`%{hsl}`, `%{lab.l}` and so on), to be used later. An
+item that is not valid, or is not supported yet, is not text: a warning says so
+and the default format is used.
+
 ## Known issues
 - There is only one popup, shared by all windows and buffers, so its layout
     and colors (`g:pastel_color_mode` and the color options) are the same
@@ -116,6 +166,8 @@ leaves the global one in effect (with a warning).
   - `t`: the color on a checkered "transparent" background
   - `2`: the color on black and white, alternating
   - `3`: the color on black, checkered and white, alternating, in that order
+  - `d`: details, text about the color, SEE Detail text
+  - `.`: separates what is on its two sides, SEE Detail text; it takes no room
   - `|`: the blocks after it go in a new row below
 
   For example, `'t'` is a single block, `'kw'` shows black and white side by
@@ -124,9 +176,11 @@ leaves the global one in effect (with a warning).
   The area not covered by a block, eg. right of a shorter row, is transparent:
   the text under it stays visible.
 
-  Any other value (including a leading, trailing or doubled `|`) prints a
-  warning. At startup the plugin does not load; when set later, the previous
-  layout stays.
+  Any other value (including a leading, trailing or doubled `|`, or a layout
+  in which the details are not valid, SEE Detail text) prints a warning. At
+  startup the plugin does not load; when set later, the previous layout stays.
+- `g:pastel_detail_format` (`'%x'`) - what the detail regions show: a template,
+    or a list of them, SEE Detail text
 - `g:pastel_color_timer` (5) - seconds between the backgrounds of `2` and `3`
     blocks changing, `0.1` or more, fractions allowed; less than that turns
     alternating off, showing the first background. The timer only runs while
@@ -186,10 +240,6 @@ once; only the part on the screen is drawn.
 Sizes may be odd, in which case the color block starts or ends in the middle
 of a line. If the total height is odd, the lower half of the last line is left
 in the default color (`Normal`), as a line is always two half-characters high.
-
-## Not yet in effect
-The option `g:pastel_detail_mode` exists, but nothing reads it yet. SEE
-[CHANGELOG.md](CHANGELOG.md) for what is planned.
 
 # TECHNICAL INFORMATION
 On every `CursorMoved`, the plugin matches the notations of colors (the

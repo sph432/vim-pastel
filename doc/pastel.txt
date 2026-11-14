@@ -77,17 +77,68 @@ g:pastel_color_mode  (default "t")                       *g:pastel_color_mode*
     - t: the color on a checkered "transparent" background
     - 2: the color on black and white, alternating, SEE |g:pastel_color_timer|
     - 3: the color on black, checkered and white, alternating, in that order
+    - d: details, text about the color, SEE |g:pastel_detail_format|
+    - .: separates what is on its two sides, SEE |g:pastel_detail_format|; it
+      takes no room
     - a bar: the blocks after it go in a new row below
 
     Examples: >
         let g:pastel_color_mode = 't'     " one checkered block
         let g:pastel_color_mode = 'kw'    " black and white, side by side
         let g:pastel_color_mode = 't|kw'  " checkered, with both below
+        let g:pastel_color_mode = 'td'    " checkered, with details beside it
 <
 
     The text under the empty part of a layout, eg. right of a shorter row,
-    stays visible. Any other value prints a warning; when set later, the
-    previous layout stays.
+    stays visible. Any other value, or one in which the details are not valid,
+    prints a warning; when set later, the previous layout stays.
+
+g:pastel_detail_format  (default '%x')                *g:pastel_detail_format*
+    What the detail regions, the d cells of |g:pastel_color_mode|, show: a
+    template for the first region, or a list of them, one for each. A region
+    with none shows its number and the color. A d is as large as a block, so
+    'd' is just the text, 't|d' has it below a checkered block and 'td' beside
+    it.
+
+    Details in a row or column are one region, which must be a rectangle: 'dd'
+    is one region of two cells. A . between cells keeps them apart, so 'd.d'
+    is two regions, and a row of only . between rows does the same for the
+    rows above and below it. Regions are numbered in reading order, by their
+    first cell: in 'td|d.d' the d right of the t and the one below it are
+    region 1.
+
+    A region has as much room as its cells, in whole lines. If its text needs
+    more, it takes it, to the right first, then down, if there is nothing
+    there: not a block, another region, a . or a row of only . on the way. If
+    it can not grow, a line that is too long is cut and ends in an ellipsis,
+    and so does the last line if there are too many. All the regions grow to
+    the right before any down, each in reading order. A line is broken where
+    it may be, if it does not fit, instead of growing.
+
+    A template is text with these items:
+
+    - %r %g %b: the red, green and blue, 0 to 255
+    - %a: the alpha, 0 to 1
+    - %x %X: #rrggbb and, if the alpha is not 1, aa; lower, upper case
+    - %t: the color code as written in the buffer
+    - %{id}: the number of the region
+    - %n: a line break
+    - %N: where a line may be broken if it is too long; a space never is
+    - %%: a %
+
+    Numbers take modifiers after a colon, which can be combined: p is a
+    percent (%r:p is 50%), P is that without the sign, f a fraction (0.5), x
+    and X two hex digits, and .N is the number of decimals of the percent or
+    the fraction (%r:p:.1 is 49.8%); o leaves out an alpha of 1, and a makes
+    %x always have it. A colon and a letter after an item are always a
+    modifier; to have them as text, put the item in braces: %{r}:x. Example: >
+        let g:pastel_color_mode = 'td'
+        let g:pastel_detail_format = '%x%n%r:p %g:p %b:p'
+<
+
+    Everything not listed is reserved, as are %#, %*, %(, %) and the names of
+    the color spaces, to be used later. An item that is not valid is not text:
+    a warning says so and the default is used.
 
 g:pastel_color_timer  (default 5)                       *g:pastel_color_timer*
     Seconds between the backgrounds of the 2 and 3 blocks changing, 0.1 or
