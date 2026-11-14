@@ -671,9 +671,6 @@ let s:formats=[
 \  'parse': function('s:ParseCss')},
 \]
 
-"[color, start, end] of the color code under the cursor, the start and end
-"being the byte range of the code in the line, or []; if several overlap,
-"the first one, and of those the longest
 "whether not to look for colors on the current line: in a closed fold, in the
 "filetypes matching g:pastel_ignore_filetypes, and on lines longer than
 "'synmaxcol', as looking through a very long line at every cursor movement
@@ -693,6 +690,9 @@ function s:Ignored()
   return &synmaxcol > 0 && col('$') > &synmaxcol+1
 endfunction
 
+"[color, start, end] of the color code under the cursor, the start and end
+"being the byte range of the code in the line, or []; if several overlap,
+"the first one, and of those the longest
 function s:ColorAtCursor()
   if s:Ignored()
     return []
