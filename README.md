@@ -137,9 +137,12 @@ defaults are shown in parentheses.
   4-digit form is not affected, as it is always `#RGBA`.
 - `g:pastel_alpha_first_filetypes` (`['java', 'kotlin']`) - the filetypes
     where `'auto'` means `'first'`
-- `g:pastel_ignore_filetypes` (`[]`) - the filetypes where no colors are looked
-    for, eg. `['sql']` for its very long lines, or `['gitcommit']`, where
-    `#123` is an issue and not a `#RGB` color
+- `g:pastel_ignore_filetypes` (`['gitcommit', '*sql*']`) - the filetypes where
+    no colors are looked for, as a list of glob patterns (`*`, `?`, `[abc]`,
+    `{a,b}`), each matched against the whole filetype or any part of a
+    compound one: here `gitcommit`, where `#123` is an issue and not a `#RGB`
+    color, and `sql` and its variants (`mysql`, `plsql`, ...), for their very
+    long lines
 - `g:pastel_offset_x` (`2`) - horizontal placement of the popup relative to the
     color code, in characters:
   - positive: right of the code, its left edge that many columns after the

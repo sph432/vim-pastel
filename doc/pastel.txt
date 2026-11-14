@@ -107,9 +107,13 @@ b:pastel_alpha_position                              *b:pastel_alpha_position*
 g:pastel_alpha_first_filetypes  (default ['java', 'kotlin'])
     The filetypes where the "auto" of |g:pastel_alpha_position| means "first".
 
-g:pastel_ignore_filetypes  (default [])            *g:pastel_ignore_filetypes*
-    The filetypes where no colors are looked for, eg. ['sql'] for its very
-    long lines, or ['gitcommit'], where #123 is an issue and not a #RGB color.
+                                                   *g:pastel_ignore_filetypes*
+g:pastel_ignore_filetypes  (default ['gitcommit', '*sql*'])
+    The filetypes where no colors are looked for, as a list of glob patterns,
+    eg. * for any characters, ? for one, [abc] for one of some and {a,b} for
+    alternatives. Each is matched against the whole filetype, or any part of a
+    compound one. The default is "gitcommit", where #123 is an issue and not a
+    #RGB color, and sql and its variants, for their very long lines.
 
 g:pastel_offset_x  (default 2)                             *g:pastel_offset_x*
     Horizontal placement of the popup relative to the color code, in
