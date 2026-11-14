@@ -109,7 +109,8 @@
 #### Added
 - Colors in Sass and Less functions with a color argument, eg.
     `rgba(#fff, 0.5)`
-- `g:pastel_ignore_filetypes`, the filetypes where no colors are looked for
+- `g:pastel_ignore_filetypes`, the filetypes where no colors are looked for,
+    as glob patterns; `gitcommit` and `*sql*` by default
 
 #### Fixed
 - Cursor movement lagging on very long lines (seconds, on lines of millions
