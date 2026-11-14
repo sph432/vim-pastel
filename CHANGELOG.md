@@ -138,6 +138,11 @@
 - Colors in Sass and Less functions with a color argument, eg.
     `rgba(#fff, 0.5)`
 
+#### Changed
+- The default of `g:pastel_color_mode` is now `'t'` (the checkered
+    background, as in sharkdp/pastel), as it was `'k'`; set it to `'k'` to
+    keep the black one
+
 # 1.x - color spaces (planned)
 #### Added
 - `lab()`, `lch()`, `oklab()` and `oklch()`, only in the space and slash
