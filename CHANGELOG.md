@@ -179,6 +179,12 @@
     inverses (`PastelCyan`, `PastelMagenta`, `PastelYellow`) and its alpha
     (`PastelAlpha`), defined as the color changes, if a template uses them
 
+## 0.9.2 (planned)
+#### Fixed
+- The plugin did nothing in Vims from 8.1.1553 to 8.1.2370, which have popup
+    windows but not yet `has('popupwin')`; it now looks for `popup_create()`
+- An error at startup in a Vim built without `+termguicolors`
+
 # 0.10 - ANSI colors (planned)
 ## 0.10.0 (planned)
 #### Added
