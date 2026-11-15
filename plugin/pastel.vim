@@ -3,7 +3,9 @@ if exists('g:loaded_pastel')
 endif
 let g:loaded_pastel=1
 
-if !has('popupwin') || !has('textprop')
+"has('popupwin') only exists since 8.1.2371, before it popups were a part of
+"+textprop, so the function is what is looked for
+if !exists('*popup_create') || !has('textprop')
   finish
 endif
 "a Vim built without the feature has no such option, and so no true colors
