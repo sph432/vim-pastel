@@ -37,9 +37,9 @@ would work as well, but will require you running `:helptags ALL` for every upgra
         position on the screen.
   - **8.2.0324** and below, without the `SafeState` event, closing or opening a fold
         without moving the cursor leaves the popup as it was until the cursor moves.
-  - **8.1.2369** and below, while lacking `+popupwin`, implement the required functions
+  - **8.1.2370** and below, while lacking `+popupwin`, implement the required functions
         as part of `+textprop` and the plugin is prepared to handle these versions
-  - **8.1.1589** and below, which lack popup masks, the area of a layout claimed by no block
+  - **8.1.1579** and below, which lack popup masks, the area of a layout claimed by no block
         hides the text under it, instead of being transparent.
   - **8.1.1552** and below, lacking `popup_settext()`, are unable to support the plugin
 - Note that Neovim, lacking `+popupwin` as well, is not planned to be supported any time soon.
@@ -264,6 +264,22 @@ once; only the part on the screen is drawn.
 Sizes may be odd, in which case the color block starts or ends in the middle
 of a line. If the total height is odd, the lower half of the last line is left
 in the default color (`Normal`), as a line is always two half-characters high.
+
+### Example configuration
+![pastel-like ui](res/dppastel.png)
+
+for a sharkdp/pastel-like appearance, set the following:
+
+```vim
+let g:pastel_color_mode='td'
+let g:pastel_detail_format=['  Hex: %x%n  RGB: %{rgb:c}%n  HSL: hsl(%{hsl.h}, %{hsl.s:.2}, %{hsl.l:.2})']
+
+let g:pastel_color_size=12 "14 / 3 results in the look of an older version
+let g:pastel_bg_size=2     "shown on the .gif embedded in sharkdp/pastel's README
+
+let g:pastel_trans_fg='#F1F1F1'
+let g:pastel_trans_bg='#B7B7B7'
+```
 
 # TECHNICAL INFORMATION
 On every `CursorMoved`, the plugin matches the notations of colors (the
