@@ -1,60 +1,67 @@
 # DESCRIPTION
-pastel.vim is a Vim plugin that previews the color under the cursor. When the
-cursor is on a `#RRGGBB` color code, a small popup shows that color.
+pastel.vim is a vim plugin that eventually aims to reproduce a substantial amount
+of the functionality of the command-line tool [pastel](https://github.com/sharkdp/pastel)
 
-The idea is taken from the command-line tool
-[sharkdp/pastel](https://github.com/sharkdp/pastel).
+Currently, only the color preview under the cursor is implemented, albeit with a
+customizable interface and wider range of supported formats than the original.
 
 # USAGE
-Move the cursor onto a color code such as `#FF8800`. A popup with the color
+Move the cursor onto a color code such as `#FFCC00`. A popup with the color
 appears next to the cursor and disappears when the cursor leaves the code.
 
 The popup is also hidden in insert mode and when leaving the buffer, and
 shown again on leaving insert mode.
 
 # INSTALL
-With [vim-plug](https://github.com/junegunn/vim-plug) (or your favourite plugin
-manager), add the plugin to your
-`.vimrc` and run `:PlugInstall`:
+> [!INFO]
+> If your vim instance lacks one or more of the required [features and settings](#dependencies),
+> pastel.vim will fail silently.
+
+With [vim-plug](https://github.com/junegunn/vim-plug) (or your plugin manager of choice),
+add the plugin to your `.vimrc` and run `:PlugInstall`:
 ```vim
 Plug 'https://tools.sphnet.in/git/sph/vim-pastel'
 ```
 
-Vim's native package directory (`~/.vim/pack/*/start/`) will work as well.
-
-The plugin does nothing, without raising errors, if Vim lacks the required
-features (SEE DEPENDENCIES) or if neither a GUI nor `termguicolors` is in use.
-
-The documentation is also available inside Vim as `:help pastel`. Plugin
-managers generate its tags; with a native package directory, run `:helptags ALL` once.
+If your vim is built with `+packages`, cloning the repo into vim's native package directory,
+`~/.vim/pack/*/start/`, or for more recent versions `$XDG_CONFIG_HOME/vim/pack/*/start/`,
+would work as well, but will require you running `:helptags ALL` for every upgrade manually.
 
 # DEPENDENCIES
-- Vim 8.1.1553 or newer, built with `+popupwin`, `+textprop` and `+eval`
-- A terminal with `termguicolors` enabled (or a GUI)
-- Note that Neovim, lacking +popupwin, is not planned to be supported any time soon
+- vim built with `+popupwin`, `+textprop` and `+eval` is required for ideal operation  
+- Furthermore, if running in a terminal, build option `+termguicolors` and its eponymous
+     option being set is required additionally.  
+- Version limitations:
+  - **8.2.4712** and below, lacking the `WinScrolled` event, will not update the popup
+        when scrolling the window without moving, leaving it at its old absolute
+        position on the screen.
+  - **8.2.0324** and below, without the `SafeState` event, closing or opening a fold
+        without moving the cursor leaves the popup as it was until the cursor moves.
+  - **8.1.2369** and below, while lacking `+popupwin`, implement the required functions
+        as part of `+textprop` and the plugin is prepared to handle these versions
+  - **8.1.1589** and below, which lack popup masks, the area of a layout claimed by no block
+        hides the text under it, instead of being transparent.
+  - **8.1.1552** and below, lacking `popup_settext()`, are unable to support the plugin
+- Note that Neovim, lacking `+popupwin` as well, is not planned to be supported any time soon.
 
 # DETAILS
 ## Detected colors
 These hexadecimal codes are recognized:
-- `#RGB` and `#RRGGBB`
-- `#RGBA` and `#RRGGBBAA`, or `#AARRGGBB`, see `g:pastel_alpha_position`
+- both `#RRGGBB` and the short form `#RGB`
+- `#RRGGBBAA` and `#RGBA`, or `#AARRGGBB`, but not `#ARGB` - see `g:pastel_alpha_position`
 
-`#ARGB` is not recognized: the 4-digit form is always `#RGBA`. The code must
-not be preceded or followed by a letter, digit or underscore, so that eg.
-`#define` or `#abcdefg1` are not taken for colors.
+ The code must not be preceded or followed by a letter, digit or underscore, so
+that eg.  `#define` or `#abcdefg1` are not taken for colors.
 
 These functions are recognized, in upper or lower case, with the comma notation
 (`rgb(255, 0, 0, 0.5)`) and the space and slash one (`rgb(255 0 0 / 50%)`),
 except where noted:
-- `rgb()` and `rgba()`, which are the same: the channels are numbers from 0 to
-    255 or percentages, and may be mixed
-- `hsl()` and `hsla()`, which are the same: the hue is a number of degrees or
-    an angle (`deg`, `grad`, `rad`, `turn`), the saturation and the lightness
-    are percentages, or plain numbers of percents
-- `hwb()` and `hwba()`: the hue as in `hsl()`, the whiteness and the
-    blackness as percentages, or plain numbers of percents; as in CSS, only
-    with the space and slash notation. If they add up to 100% or more, the
-    color is a gray
+- `rgb()` and `rgba()`, the channels are numbers from 0 to 255 or percentages, and may be mixed
+- `hsl()` and `hsla()`, the hue is an angle (`deg` (default if omitted), `grad`, `rad`, `turn`),
+    the saturation and the lightness are percentages, or plain numbers of percents
+- `hwb()` and `hwba()`: the hue as in `hsl()`, the whiteness and the blackness as percentages,
+    or plain numbers of percents; as in CSS, only with the space and slash notation.
+    If they add up to 100% or more, the color is a gray.
 - `hsv()` and `hsva()`, as in Less.js: the hue as in `hsl()`, the saturation
     and the value as percentages, or, as in Less, plain numbers from 0 to 1
 
@@ -153,20 +160,11 @@ and notations (`%{lab.l}`, `%{hsla}`, `%{hex}` and so on), to be used later. An
 item that is not valid, or is not supported yet, is not text: a warning says so
 and the default format is used.
 
-## Known issues
+## Known limitations
 - There is only one popup, shared by all windows and buffers, so its layout
     and colors (`g:pastel_color_mode` and the color options) are the same
     everywhere; and a popup is only shown for the cursor of the current
     window.
-- In Vim versions before 8.2.4713, lacking the `WinScrolled` event, the popup
-    is only updated on cursor movement; scrolling the window without moving
-    the cursor leaves the popup at its old position on the screen.
-- In Vim versions before 8.2.0325, without the `SafeState` event, closing or
-    opening a fold without moving the cursor leaves the popup as it was until
-    the cursor moves.
-- In Vim versions before 8.1.1580, which lack popup masks, the area of a layout
-    that no block covers (eg. right of the shorter row of `'wk|t'`) hides the
-    text under it, instead of being transparent.
 
 ## Configuration
 All options are global variables, set in your `.vimrc` or at any time later
@@ -303,10 +301,10 @@ SEE [LICENSE.md](LICENSE.md)
 ## DISCLAIMER
 > [!WARNING]
 > This repository contains the following code or assets which are LLM-generated
->     or heavily edited using generative LLM tools:
->     - `plugin/pastel.vim`
+>     or heavily edited using generative LLM tools:  
+>     - `plugin/pastel.vim`  
 > These MAY NOT have been manually reviewed, thus MAY contain errors, insecure
->     constructs or licensing artifacts not evident to the authors.
+>     constructs or licensing artifacts not evident to the authors.  
 
 ## RULES
 This repository follows the conventions defined in
@@ -315,6 +313,5 @@ its [CoCo](https://tools.sphnet.in/git/meta/conventions/src/branch/master/CoCo.m
 commit message scheme.
 
 ## ATTRIBUTION
-- [David Peter](https://github.com/sharkdp) - the original idea of previewing
-    a color as a block on black, white and "transparent" backgrounds, as seen in
-    his command-line tool [sharkdp/pastel](https://github.com/sharkdp/pastel)
+- [David Peter](https://github.com/sharkdp) - the original idea and implementation
+    of his command-line tool [pastel](https://github.com/sharkdp/pastel)
