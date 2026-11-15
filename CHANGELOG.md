@@ -180,6 +180,11 @@
     (`PastelAlpha`), defined as the color changes, if a template uses them
 
 ## 0.9.2 (planned)
+#### Changed
+- Detail regions grow by whole blocks, as many as their text needs, instead of
+    by the exact number of columns or lines: a text of 31 columns in a cell of
+    16 takes 32
+
 #### Fixed
 - The plugin did nothing in Vims from 8.1.1553 to 8.1.2370, which have popup
     windows but not yet `has('popupwin')`; it now looks for `popup_create()`
