@@ -20,7 +20,8 @@ CONTENTS                                                     *pastel-contents*
 ==============================================================================
 2. REQUIREMENTS                                          *pastel-requirements*
 
-    - Vim 8.1.1553 or newer, built with |+popupwin|, |+textprop| and |+eval|
+    - Vim 8.1.1553 or newer, built with popup windows (|+popupwin|, which is
+      only called that from 8.1.2371), |+textprop| and |+eval|
     - A GUI, or a terminal with 'termguicolors' enabled
 
     Without these, the plugin does nothing, and does not raise errors.
