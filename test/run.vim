@@ -962,12 +962,12 @@ call s:Check('detail: alone',
 call s:Check('detail: the default format', s:Rendered('d', '%x', '#ff8800')[0], '#ff8800...')
 call s:Check('detail: popup size', [popup_getpos(popup_list()[0]).width, popup_getpos(popup_list()[0]).height], [10, 5])
 call s:Check('detail: rgb grows to the right', s:Rendered('d', 'rgb(%r %g %b)', '#ff8800'),
-\            ['rgb(255.136.0)'] + repeat([repeat('.', 14)], 4))
+\            ['rgb(255.136.0)......'] + repeat([repeat('.', 20)], 4))
 call s:Check('detail: alpha', s:Rendered('d', '%x', '#ff8800cc')[0], '#ff8800cc.')
 call s:Check('detail: broken where permitted', s:Rendered('d', 'rgb(%N%r %N%g %N%b)', '#ff8800'),
 \            ['rgb(255...', '136.0)....', s:blank10, s:blank10, s:blank10])
 call s:Check('detail: lines', s:Rendered('d', '%x%n%r:p %g:p %b:p%nsrc %t', 'rgb(255 136 0)'),
-\            ['#ff8800...........', '100%.53%.0%.......', 'src.rgb(255.136.0)', repeat('.', 18), repeat('.', 18)])
+\            ['#ff8800.............', '100%.53%.0%.........', 'src.rgb(255.136.0)..', repeat('.', 20), repeat('.', 20)])
 call s:Check('detail: under a block', s:Rendered('t|d', '%x', '#ff8800'),
 \            ['HHHHHHHHHH', 'HH......HH', 'HH......HH', 'HH......HH', 'HHHHHHHHHH', '#ff8800...']
 \            + repeat([s:blank10], 4))
@@ -991,8 +991,9 @@ call s:Check('detail: a long list is not a problem', s:Rendered('d', ['a', 'b'],
 "growth: to the right before down, only into what is free, else cut
 call s:Check('growth: both want the cell, the right one has it',
 \            s:Rendered('td|d', ['1%n2%n3%n4%n5%n6%n7%n8', 'wide-wide-wide-wide-wide'], '#ff8800')[0:5],
-\            ['HHHHHHHHHH1.............', 'HH......HH2.............', 'HH......HH3.............',
-\             'HH......HH4.............', 'HHHHHHHHHH5…............', 'wide-wide-wide-wide-wide'])
+\            ['HHHHHHHHHH1...................', 'HH......HH2...................',
+\             'HH......HH3...................', 'HH......HH4...................',
+\             'HHHHHHHHHH5…..................', 'wide-wide-wide-wide-wide......'])
 let s:tall='1%n2%n3%n4%n5%n6%n7%n8'
 call s:Check('growth: free down in a ragged layout', s:Rendered('td|k', [s:tall], '#ff8800')[0:7],
 \            ['HHHHHHHHHH1.........', 'HH......HH2.........', 'HH......HH3.........', 'HH......HH4.........',
@@ -1002,16 +1003,16 @@ call s:Check('growth: a row of . stops it, the size', popup_getpos(popup_list()[
 call s:Check('growth: a . stops it to the right',
 \            s:Rendered('d.', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghi…')
 call s:Check('growth: without the . it does not',
-\            s:Rendered('d', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghijklmnopqrstuvwxyz')
+\            s:Rendered('d', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghijklmnopqrstuvwxyz....')
 call s:Check('growth: a . elsewhere does not',
-\            s:Rendered('.d', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghijklmnopqrstuvwxyz')
+\            s:Rendered('.d', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghijklmnopqrstuvwxyz....')
 call s:Check('growth: the claim of the one above is cancelled',
 \            s:Rendered('td|.|d', [s:tall, 'wide-wide-wide-wide-wide'], '#ff8800')[4:5],
-\            ['HHHHHHHHHH5…............', 'wide-wide-wide-wide-wide'])
+\            ['HHHHHHHHHH5…..................', 'wide-wide-wide-wide-wide......'])
 call s:Check('growth: blocked to the right, cut',
 \            s:Rendered('dk', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], 'abcdefghi…..........')
 call s:Check('growth: free to the right',
-\            s:Rendered('kd', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], '..........abcdefghijklmnopqrstuvwxyz')
+\            s:Rendered('kd', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')[0], '..........abcdefghijklmnopqrstuvwxyz....')
 call s:Check('growth: blocked down, cut',
 \            s:Rendered('d|k', '1%n2%n3%n4%n5%n6%n7%n8', '#ff8800')[0:5],
 \            ['1.........', '2.........', '3.........', '4.........', '5…........', s:blank10])
@@ -1020,7 +1021,7 @@ call s:Check('growth: free down',
 \            ['1.........', '2.........', '3.........', '4.........', '5.........', '6.........', '7.........',
 \             '8.........'])
 call s:Check('growth: free down, the size',
-\            [popup_getpos(popup_list()[0]).width, popup_getpos(popup_list()[0]).height], [10, 13])
+\            [popup_getpos(popup_list()[0]).width, popup_getpos(popup_list()[0]).height], [10, 15])
 call s:Check('growth: breaking instead',
 \            s:Rendered('kd|dk', ['a%Nb%Nc', 'x%Ny%Nz'], '#ff8800')[0]
 \            . s:Rendered('kd|dk', ['a%Nb%Nc', 'x%Ny%Nz'], '#ff8800')[5],
@@ -1034,8 +1035,9 @@ let g:pastel_bg_size=1
 call s:Check('odd: popup size',
 \            [s:Rendered('d', 'a%nb%nc', '#ff8800')[0], popup_getpos(popup_list()[0]).width,
 \             popup_getpos(popup_list()[0]).height],
-\            ['a....', 5, 3])
-call s:Check('odd: the lines at the bottom', s:Rendered('d', 'a%nb%nc', '#ff8800'), ['a....', 'b....', 'c....'])
+\            ['a....', 5, 5])
+call s:Check('odd: the lines at the bottom', s:Rendered('d', 'a%nb%nc', '#ff8800'),
+\            ['a....', 'b....', 'c....', '.....', '.....'])
 call s:Check('odd: the shared line is not for the text',
 \            s:Rendered('d|k', 'a%nb%nc', '#ff8800')[0:2], ['a....', 'b…...', 'HHHHH'])
 let g:pastel_color_size=6
@@ -1049,9 +1051,25 @@ call s:Check('pixels: a detail cell, bottom', s:Pixel(19, 9), 'e')
 call s:Check('pixels: the other detail cell', s:Pixel(0, 10), 'e')
 call s:Check('pixels: not a detail cell', s:Pixel(0, 0), 'l')
 call s:Check('pixels: outside', s:Pixel(10, 10), 'n')
+"a region grows by whole blocks, which stay whole: a text of 14 characters in a
+"10 wide cell takes one more block, not 4 columns, and 26 take two
+call s:Rendered('d', 'rgb(%r %g %b)', '#ff8800')
+call s:Check('whole blocks: one more, its width', popup_getpos(popup_list()[0]).width, 20)
+call s:Check('whole blocks: one more, its end', [s:Pixel(19, 9), s:Pixel(20, 9)], ['e', 'n'])
+call s:Rendered('d', repeat('x', 21), '#ff8800')
+call s:Check('whole blocks: 21 in 10 are one more', popup_getpos(popup_list()[0]).width, 30)
+call s:Rendered('d', repeat('x', 20), '#ff8800')
+call s:Check('whole blocks: 20 in 10 are one more', popup_getpos(popup_list()[0]).width, 20)
+call s:Rendered('d', repeat('x', 10), '#ff8800')
+call s:Check('whole blocks: it fits, nothing more', popup_getpos(popup_list()[0]).width, 10)
+call s:Rendered('d', '1%n2%n3%n4%n5%n6', '#ff8800')
+call s:Check('whole blocks: 6 lines in 5 are one more block down', popup_getpos(popup_list()[0]).height, 10)
+call s:Rendered('d', '1%n2%n3%n4%n5', '#ff8800')
+call s:Check('whole blocks: 5 lines in 5 are not', popup_getpos(popup_list()[0]).height, 5)
 call s:Rendered('kd', 'abcdefghijklmnopqrstuvwxyz', '#ff8800')
 call s:Check('pixels: grown region', s:Pixel(35, 4), 'e')
-call s:Check('pixels: not grown further', s:Pixel(36, 4), 'n')
+call s:Check('pixels: not grown further', s:Pixel(40, 4), 'n')
+call s:Check('pixels: grown by a whole block', s:Pixel(39, 4), 'e')
 let s:popup=popup_list()[0]
 call s:Check('detail text has its own highlight',
 \            map(prop_list(1, {'bufnr': winbufnr(s:popup)}), 'v:val.type'), ['pastelpkk', 'pasteldetail'])
