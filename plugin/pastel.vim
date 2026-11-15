@@ -1021,11 +1021,11 @@ endfunction
 "show and how large they are, as a dict, SEE s:frame
 "a region has as much room as the cells it is made of, in whole lines: those
 "of which both pixels are in the cells, so not one shared with another row;
-"where the text needs more, it grows to the right, as far as it needs, into
-"what is not covered by a cell or another region (including what the padding
-"of an odd height leaves), then down likewise, all the regions to the right
-"before any is grown down, each in reading order, but not past a break; it is
-"cut, with an ellipsis, where it can not grow
+"where the text needs more, it grows to the right, by as many whole blocks as
+"it needs, into what is not covered by a cell or another region, then down
+"likewise, all the regions to the right before any is grown down, each in
+"reading order, but not past a break; it is cut, with an ellipsis, where it
+"can not grow
 function s:BuildFrame(color, text)
   let rows=s:layout.rows
   let block=s:BlockSize()
@@ -1062,7 +1062,8 @@ function s:BuildFrame(color, text)
         let need=max([need, strdisplaywidth(segment.t)])
       endfor
     endfor
-    let grow=need-(reg.x1-reg.x0)
+    "in whole blocks, as a region only takes the cells it needs, not a part
+    let grow=(max([need-(reg.x1-reg.x0), 0])+block-1)/block
     let region=s:layout.regions[reg.id-1]
     for row in range(region.r0, region.r1)
       if s:layout.hbreak[row][region.c1]
@@ -1072,19 +1073,21 @@ function s:BuildFrame(color, text)
     for claim in claims
       if grow > 0 && claim[4] != reg.id && claim[0] >= reg.x1
 \       && claim[2] < reg.y1 && claim[3] > reg.y0
-        let grow=min([grow, claim[0]-reg.x1])
+        let grow=min([grow, (claim[0]-reg.x1)/block])
       endif
     endfor
     if grow > 0
-      call add(claims, [reg.x1, reg.x1+grow, reg.y0, reg.y1, reg.id])
-      let reg.x1+=grow
+      call add(claims, [reg.x1, reg.x1+grow*block, reg.y0, reg.y1, reg.id])
+      let reg.x1+=grow*block
     endif
     let reg.lines=s:Wrap(reg.segments, reg.x1-reg.x0)
   endfor
   "then down, as far as the lines need
   for reg in frame.regions
-    let more=len(reg.lines)-max([reg.ke-reg.ks, 0])
-    let edge=2*reg.ke
+    "in whole blocks, as to the right
+    let more=max([len(reg.lines)-max([reg.ke-reg.ks, 0]), 0])
+    let more=(2*more+block-1)/block
+    let edge=reg.y1
     let below=s:layout.regions[reg.id-1].r1+1
     if below < len(rows) && s:layout.vbreak[below]
       let more=0
@@ -1092,12 +1095,13 @@ function s:BuildFrame(color, text)
     for claim in claims
       if more > 0 && claim[4] != reg.id && claim[2] >= edge
 \       && claim[0] < reg.x1 && claim[1] > reg.x0
-        let more=min([more, claim[2]/2-reg.ke])
+        let more=min([more, (claim[2]-edge)/block])
       endif
     endfor
     if more > 0
-      call add(claims, [reg.x0, reg.x1, edge, edge+2*more, reg.id])
-      let reg.ke+=more
+      call add(claims, [reg.x0, reg.x1, edge, edge+more*block, reg.id])
+      let reg.y1+=more*block
+      let reg.ke=reg.y1/2
     endif
     let fit=max([reg.ke-reg.ks, 0])
     if len(reg.lines) > fit
