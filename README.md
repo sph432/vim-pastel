@@ -99,12 +99,14 @@ above one of two cells) or `'td|d.d'` instead.
 
 A region has as much room as its cells, in whole lines. If its text needs more,
 it takes it, to the right first, then down, if there is nothing there: not a
-block, nor another region, nor a `.` or a row of only `.` on the way. If it can
-not grow, a line that is too long is cut and ends in `…`, and so does the last
-line if there are too many. Regions grow in reading order, but all to the right
-before any down, so in `'td|d'` the second region, if it needs the width, gets
-the cell under the first before it. Where a line may be broken (`%N`) it is, if
-it does not fit, instead of growing.
+block, nor another region, nor a `.` or a row of only `.` on the way. It takes
+whole blocks, as many as it needs, and all of what it takes is its own, so text
+of 31 columns in a cell of 16 gets 32. If it can not grow, a line that is too
+long is cut and ends in `…`, and so does the last line if there are too many.
+Regions grow in reading order, but all to the right before any down, so in
+`'td|d'` the second region, if it needs the width, gets the cell under the first
+before it. Where a line may be broken (`%N`) it is, if it does not fit, instead
+of growing.
 
 The format is a string, for the first region, or a list of strings, one for
 each region. A region with none shows its number and the color: `Region 2`, and
