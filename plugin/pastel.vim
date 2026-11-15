@@ -6,7 +6,8 @@ let g:loaded_pastel=1
 if !has('popupwin') || !has('textprop')
   finish
 endif
-if !has('gui_running') && !&termguicolors
+"a Vim built without the feature has no such option, and so no true colors
+if !has('gui_running') && !(exists('+termguicolors') && &termguicolors)
   finish
 endif
 
